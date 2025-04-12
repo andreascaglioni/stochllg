@@ -9,46 +9,46 @@ be released on PyPI.
 
 #. Clone the repository:
 
-.. code-block:: console
+   .. code-block:: console
     
     git clone <git@github.com:andreascaglioni/stochastic-llg-equation.git>
     
-#. Install dependencies:
+#. Install the dependencies:
 
    * The finite elements computations are run with dolfin-x, the Python interface to Fenics-x. See their website `fenicsproject.org <https://fenicsproject.org/>`_ for installation instructions (Conda environment *recommended*).
    
-   * Running the code requires several basic Python dependencies:
-      
-  .. code-block:: console
+   * Running the code requires several basic Python dependencies listed in the `requirements.txt` file. You can install them with pip:
+   
+    .. code-block:: console
     
-    pip install -r requirements.txt
+      pip install -r requirements.txt
     
 #. Optionally, you can install ParaView to visualize the solutions from the examples stored in .xdmf files. Find more instructions on their website: `paraview.org <https://www.paraview.org/>`_.
 
 Usage
 -----
-Run the examples from the root directory of the project with
-
+Run the examples from the root directory of the project with:
+  
 .. code-block:: python
-   
-   python3 examples/example_<name>.py
+  
+  python3 examples/example_name.py
 
 Features
 --------
+Here are the main features of the code:
 
-* Implementation of the Tangent Plane Scheme (TPS) as in the publication :cite:`Akrivis2021Higher`. Here, the tangent plane constraint is understood in a "weak" L2 sense and both the BDF time stepping and finite elements space discretizations are high-order.
-* Lévy-Ciesielski parametrization of the Brownian motion: Given n i.i.d. samples of the standard normal distribution, generate a sample path in time.
-* Structured, modular implementation of the Tangent Plane Scheme, split into sub-functions as well as several supporting functions such as:
-  
-  * Computation of the error;
+- Implementation of the Tangent Plane Scheme (TPS) as in the publication :cite:`Akrivis2021Higher`. Here, the tangent plane constraint is understood in a "weak" :math:`L^2` sense and both the BDF time stepping and finite elements space discretizations are high-order.
+- Lévy-Ciesielski parametrization of the Brownian motion: Given a vector of i.i.d. samples of the standard normal distribution, generate a sample path in time.
+- Structured, modular implementation of the Tangent Plane Scheme, split into sub-functions as well as several supporting functions such as:
 
-  * Computation of the inf-sup constant;
+  - Computation of the error.
+  - Computation of the inf-sup constant.
+  - Exporting solutions to .XDMF files.
 
-  * Exporting solutions to .XDMF files.
+- Examples and documentation: Several examples illustrate the use of the library, including good practices e.g. defining the data in a separate file, commenting the code. Functions, especially in `src/`, are thoroughly documented (Google style).
 
-* Examples and documentation: Several examples illustrate the use of the library, including good practices e.g. defining the data a separate file, commenting the code. Functions, especially in src/, are thoroughly documented (Google style).
-
-Future to be added in the future: 
+Futures to be added in the future
+----------------------------------
 
 * Unit testing with Pytest
 * High order version of the TPS

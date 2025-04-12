@@ -7,16 +7,14 @@ Welcome to stochastic-llg-equation's documentation!
 ===================================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    introduction
 
    theory
-
-..   stochastic-llg-equation
-
-
+   
+   stochllg
 
 Indices and tables
 ==================

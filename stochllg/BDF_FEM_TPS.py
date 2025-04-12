@@ -1,19 +1,22 @@
 """
-BDF-FEM-TPS solver for parametric LLG equations.
+A high-order Tangent Plane Scheme for sampling (in time and space) the 
+stochastic Landau-Lifshitz-Gilbert (LLG) equation.
 
-This module provides functions to solve parametric Landau-Lifshitz-Gilbert (LLG) equations using:
+This algorithm uses:
 - Backward Differentiation Formula (BDF) for time discretization.
 - Finite Element Method (FEM) for spatial discretization.
-- Tangent Plane Scheme (TPS) for enforcing constraints.
+- Tangent Plane Scheme (TPS) for enforcing the orthogonality constraint between trial/test spaces and the magnetization itself.
 
 Functions:
-    coeffs_bdf(k): Compute BDF coefficients for extrapolation and time derivative.
-    compute_BDF(V3, gamma, delta, mvac_bdf): Compute BDF extrapolation and time derivative.
-    _assemble_lin_system(...): Assemble the linear system for the LLG equation.
-    inf_sup(A, ip_V_isr, ip_V3_isr, verb_iter): Compute the inf-sup constant.
-    solve_linear_system(msh, A, b, V3, V, verbose): Solve the linear system.
-    update_m(V3, mr, tau, delta, v): Update the magnetization.
-    BDF_FEM_TPS(...): Solve the parametric LLG equation using BDF-FEM-TPS.
+
+- ``coeffs_bdf(k)``: Compute BDF coefficients for extrapolation and time derivative.
+- ``compute_BDF(V3, gamma, delta, mvac_bdf)``: Compute BDF extrapolation and time derivative.
+- ``_assemble_lin_system(...)``: Assemble the linear system for the LLG equation.
+- ``inf_sup(A, ip_V_isr, ip_V3_isr, verb_iter)``: Compute the inf-sup constant.
+- ``solve_linear_system(msh, A, b, V3, V, verbose)``: Solve the linear system.
+- ``update_m(V3, mr, tau, delta, v)``: Update the magnetization.
+- ``BDF_FEM_TPS(...)``: Solve the parametric LLG equation using BDF-FEM-TPS.
+
 """
 
 from petsc4py import PETSc
@@ -275,13 +278,45 @@ def BDF_FEM_TPS(
     ip_V3_isr=[],
 ):
     """
-    Solve the parametric LLG equation using BDF-FEM-TPS.
+    Solve the parametric Landau-Lifshitz-Gilbert (LLG) equation using the 
+    Backward Differentiation Formula (BDF), Finite Element Method (FEM), 
+    and Tangential Projection Scheme (TPS).
 
     Args:
-        ...: Various inputs including data dictionary, quadrature degree, and verbosity.
+        data (dict): A dictionary containing the problem setup and parameters:
+
+            - **m0h** (*Function*): Initial magnetization function.
+            - **alpha** (*float*): Damping parameter.
+            - **gh** (*Function*): External field function.
+            - **W** (*np.ndarray*): 1D array of values of Brownian motion on time steps.
+            - **tt** (*np.ndarray*): Array of time steps.
+            - **bdf_order** (*int*): Order of the BDF scheme (currently only 1 is supported).
+            - **msh** (*Mesh*): The computational mesh.
+            - **V3** (*FunctionSpace*): Function space for vector fields.
+            - **V** (*FunctionSpace*): Function space for scalar fields.
+            
+        quadrature_degree (*int*, optional): Degree of quadrature used for numerical integration. 
+            Defaults to 0, which uses the default quadrature degree.
+        verbose (*bool* or *int*, optional): Controls verbosity of the output:
+            - If `False`, no output is printed.
+            - If `True`, detailed output is printed for every iteration.
+            - If an integer, output is printed every `verbose` iterations.
+            Defaults to `False`.
+        H_input (*Function*, optional): Optional input for an external magnetic field. 
+            If `None`, no external field is applied. Defaults to `None`.
+        return_inf_sup (*bool*, optional): If `True`, computes and returns the inf-sup constants 
+            for the linear systems solved at each time step. Defaults to `False`.
+        ip_V_isr (*list*, optional): List of inverse square root inner products for the scalar 
+            function space *V*. Used for inf-sup constant computation. Defaults to an empty list.
+        ip_V3_isr (*list*, optional): List of inverse square root inner products for the vector 
+            function space *V3*. Used for inf-sup constant computation. Defaults to an empty list.
 
     Returns:
-        tuple: Magnetizations, velocity functions, Lagrange multipliers, and inf-sup constants.
+        tuple: A tuple containing:
+            - *list[Function]*: Magnetization functions at each time step.
+            - *list[Function]*: Velocity functions at each time step (excluding the initial step).
+            - *list[Function]*: Lagrange multiplier functions at each time step (excluding the initial step).
+            - *np.ndarray[float]*: Array of inf-sup constants for each time step (if `return_inf_sup` is `True`).
     """
     # Handle verbosity: turn into int
     if verbose is True:  # log everything

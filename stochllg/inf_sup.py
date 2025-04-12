@@ -4,8 +4,9 @@ Inf-sup constant computation.
 This module provides functions to compute the inf-sup constant for saddle point systems.
 
 Functions:
-    compute_inf_sup(B, M_isr, L_isr, type=None): Estimate the inf-sup constant using singular values.
-    estimate_inf_sup_const_EIGS(B, M, L): Estimate the inf-sup constant using eigenvalues.
+    - ``compute_inf_sup(B, M_isr, L_isr, type=None)``: Estimate the inf-sup constant using singular values.
+    - ``estimate_inf_sup_const_EIGS(B, M, L)``: Estimate the inf-sup constant using eigenvalues.
+
 """
 
 from math import sqrt
@@ -18,9 +19,9 @@ def compute_inf_sup(B, M_isr, L_isr, type=None):
     Estimate the inf-sup constant using singular values.
 
     Args:
-        B (np.ndarray): Off-diagonal matrix of the saddle point system.
-        M_isr (np.ndarray): Inverse square root of the primal scalar product matrix.
-        L_isr (np.ndarray): Inverse square root of the Lagrange multipliers scalar product matrix.
+        B (np.ndarray[float]): Off-diagonal matrix of the saddle point system.
+        M_isr (np.ndarray[float]): Inverse square root of the primal scalar product matrix.
+        L_isr (np.ndarray[float]): Inverse square root of the Lagrange multipliers scalar product matrix.
         type (str, optional): "sparse" or "dense" SVD solver. Defaults to "sparse" for large matrices.
 
     Returns:
@@ -53,9 +54,9 @@ def estimate_inf_sup_const_EIGS(B, M, L):
     Estimate the inf-sup constant using eigenvalues.
 
     Args:
-        B (np.ndarray): Off-diagonal matrix of the saddle point system.
-        M (np.ndarray): Primal scalar product matrix.
-        L (np.ndarray): Lagrange multipliers scalar product matrix.
+        B (np.ndarray[float]): Off-diagonal matrix of the saddle point system.
+        M (np.ndarray[float]): Primal scalar product matrix.
+        L (np.ndarray[float]): Lagrange multipliers scalar product matrix.
 
     Returns:
         float: Estimated inf-sup constant.

@@ -4,37 +4,37 @@ This module provides a collection of utility functions for working with finite e
 spaces, exporting data, computing errors, and handling mesh-related operations.
 
 Functions:
-    compute_rate(xx, yy):
+    ``compute_rate(xx, yy)``:
         Compute the rate of change between two arrays.
 
-    export_xdmf(msh, f, tt=np.array([]), filename="plot.xdmf"):
+    ``export_xdmf(msh, f, tt=np.array([]), filename="plot.xdmf")``:
         Export finite element functions to an XDMF file.
 
-    get_H1_matrix(V3):
+    ``get_H1_matrix(V3)``:
         Compute the H1 inner product matrix for a given finite element space.
 
-    get_L2_matrix(V):
+    ``get_L2_matrix(V)``:
         Compute the L2 inner product matrix for a given finite element space.
 
-    ip_norm(x, A=None):
+    ``ip_norm(x, A=None)``:
         Compute the norm of a vector with respect to an inner product matrix.
 
-    compute_data_nonmatch_interpol(V_exa, V):
+    ``compute_data_nonmatch_interpol(V_exa, V)``:
         Compute interpolation data for non-matching finite element spaces.
 
-    error_space_time(u_exa, tt_exa, U_in, tt, ip_matrix, matching_x_spaces=True, data_nonmatch=None, t_error_type="L2"):
+    ``error_space_time(u_exa, tt_exa, U_in, tt, ip_matrix, matching_x_spaces=True, data_nonmatch=None, t_error_type="L2")``:
         Compute the space-time error between two functions.
 
-    inverse_sqrt(A):
+    ``inverse_sqrt(A)``:
         Compute the inverse square root of a matrix.
 
-    float_f(x):
+    ``float_f(x)``:
         Format a float variable in scientific notation.
 
-    mesh_elems_area(msh):
+    ``mesh_elems_area(msh)``:
         Compute the area of elements in a 2D mesh.
 
-    set_FE_data(msh, data):
+    ``set_FE_data(msh, data)``:
         Set finite element data for a given mesh and save it into a dictionary.
 """
 
@@ -206,10 +206,10 @@ def error_space_time(
         dtdt (numpy.array[float]): Array of time step sizes. NB its length is ff.size-1!
         ip_matrix (numpy.array[float]): Square matrix represnting inner product in space of exact solution.
         matching_x_spaces (bool): If True, the spaces for the x variable of u_exa and U_in are matching. Defaults to True.
-        data_nonmatch ([tuple]): Tuple (cells, interpolation_data) needed to call interpolate_nonmatching. Defaults to []. In this case, the data is computed. NB this is needed only if reference/exact and approximation spaces are not matching!
+        data_nonmatch ([tuple]): Tuple (cells, interpolation_data) needed to call ``interpolate_nonmatching``. Defaults to []. In this case, the data is computed. NB this is needed only if reference/exact and approximation spaces are not matching! Can be computed with ``compute_data_nonmatch_interpol``.
 
     Return:
-        tuple[float, numpy.ndarray[float]]: Tuple of: The (non-negative) error; The error in x at each time step.
+        tuple[float, numpy.ndarray[float]]: Tuple of: The (non-negative) error; The error in space at each time step.
     """
 
     # Ensure time steps sizes are coherent

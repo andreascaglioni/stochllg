@@ -1,13 +1,12 @@
 """
 Parametric expansions of the Wiener process.
 
-This module provides functions to construct the Wiener process using:
-- Levy-Ciesielski (LC) expansion.
-- Karhunen-Loeve (KL) expansion.
+This module provides functions to construct the Wiener process using
+either a Levy-Ciesielski (LC) or Karhunen-Loeve (KL) expansion.
 
 Functions:
-    param_LC_W(tt, yy, T): Construct Wiener process using LC expansion.
-    param_KL_Brownian_motion(tt, yy): Construct Wiener process using KL expansion.
+    ``param_LC_W(tt, yy, T)``: Construct Wiener process using LC expansion.
+    ``param_KL_Brownian_motion(tt, yy)``: Construct Wiener process using KL expansion.
 """
 
 from math import ceil, log, sqrt, pi
@@ -15,17 +14,18 @@ import warnings
 import numpy as np
 
 
+# TODO make yy 2D array and assemble W wih np.prod
 def param_LC_W(tt, yy, T):
     """
     Construct the Wiener process using the Levy-Ciesielski expansion.
 
     Args:
-        tt (numpy.ndarray): Discrete times in [0, T].
-        yy (numpy.ndarray): Parameter vector for the expansion.
+        tt (numpy.ndarray[float]): 1D array of discrete times in [0, T].
+        yy (numpy.ndarray[float]): Parameter vector for the expansion.
         T (float): Final time of approximation.
 
     Returns:
-        numpy.ndarray: Approximation of the Wiener process at times `tt`.
+        numpy.ndarray[float]: Approximation of the Wiener process at times ``tt``.
     """
 
     # Check input
@@ -65,11 +65,11 @@ def param_KL_Brownian_motion(tt, yy):
     Construct the Wiener process using the Karhunen-Loeve expansion.
 
     Args:
-        tt (numpy.ndarray): Discrete times in [0, 1].
-        yy (numpy.ndarray): Parameter vector for the expansion.
+        tt (numpy.ndarray[float]): 1D array of discrete times in [0, 1].
+        yy (numpy.ndarray[float]): Parameter vector for the expansion.
 
     Returns:
-        numpy.ndarray: Samples of the Wiener process at times `tt`.
+        numpy.ndarray[float]: Samples of the Wiener process at times ``tt``.
     """
 
     W = 0 * tt

@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path('..', '..').resolve()))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'stochastic-llg-equation'
+project = 'stochllg'
 copyright = '2025, Andrea Scaglioni'
 author = 'Andrea Scaglioni'
 
@@ -21,9 +21,9 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'sphinx.ext.mathjax',
-    'sphinxcontrib.spelling',
     'sphinxcontrib.bibtex',
-    'sphinx_rtd_theme'
+    'sphinx.ext.autodoc'
+    # 'sphinxcontrib.spelling'
 ]
 
 templates_path = ['_templates']
@@ -34,7 +34,7 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 html_static_path = ['_static']
 
 # -- Options for intersphinx extension ---------------------------------------
