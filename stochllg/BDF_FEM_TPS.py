@@ -1,20 +1,47 @@
-"""Module with functions to sample the solution to a parametric LLG equation
-coming from the stochastic LLG equation.
+"""
+BDF-FEM-TPS solver for parametric LLG equations.
+
+This module provides functions to solve parametric Landau-Lifshitz-Gilbert (LLG) equations using:
+- Backward Differentiation Formula (BDF) for time discretization.
+- Finite Element Method (FEM) for spatial discretization.
+- Tangent Plane Scheme (TPS) for enforcing constraints.
+
+Functions:
+    coeffs_bdf(k): Compute BDF coefficients for extrapolation and time derivative.
+    compute_BDF(V3, gamma, delta, mvac_bdf): Compute BDF extrapolation and time derivative.
+    _assemble_lin_system(...): Assemble the linear system for the LLG equation.
+    inf_sup(A, ip_V_isr, ip_V3_isr, verb_iter): Compute the inf-sup constant.
+    solve_linear_system(msh, A, b, V3, V, verbose): Solve the linear system.
+    update_m(V3, mr, tau, delta, v): Update the magnetization.
+    BDF_FEM_TPS(...): Solve the parametric LLG equation using BDF-FEM-TPS.
 """
 
 from petsc4py import PETSc
 import time
 import numpy as np
 from scipy.special import comb
+
+# Import dolfinx and ufl
 import ufl
 from dolfinx import la
 from dolfinx.fem import Constant, Function, form
 from ufl import dx, grad, inner, cross, dot
 from dolfinx.fem.petsc import assemble_matrix_nest, assemble_vector_nest
-from src.inf_sup import compute_inf_sup
+
+# Import from this project
+from stochllg.inf_sup import compute_inf_sup
 
 
 def coeffs_bdf(k):
+    """
+    Compute BDF coefficients for extrapolation and time derivative.
+
+    Args:
+        k (int): BDF order.
+
+    Returns:
+        tuple: Coefficients for extrapolation (gamma) and time derivative (delta).
+    """
     gamma = []  # k coefficient for BDF extrapolation
     delta = []  # k+1 coefficient for BDF time derivative
     tmp = 0.0
@@ -31,23 +58,18 @@ def coeffs_bdf(k):
 
 
 def compute_BDF(V3, gamma, delta, mvac_bdf):
-    """Compute BDF functions (extrapolation mhat and time derivative past
-    information mr) from past magnetizations.
+    """
+    Compute BDF extrapolation and time derivative from past magnetizations.
 
     Args:
-        V3 (functionspace): Function space magnetizations
-        gamma (list[float]): List of coefficient BDF extrapolation of length bdf_order
-        delta (list[float]): List of coefficneti BDF time derivative of length bdf_order+1.
-            NB the term delta[0] is never used in this function, but only once v
-            (m velocity) is computed to obtain m[j] = mr + tau / delta[0] * v
-        mvac_bdf (list[Fuction(V3)]): List of relevant magnetizations of length bdf_order.
+        V3 (FunctionSpace): Function space for magnetizations.
+        gamma (list[float]): Coefficients for BDF extrapolation.
+        delta (list[float]): Coefficients for BDF time derivative.
+        mvac_bdf (list[Function]): Past magnetizations.
 
     Returns:
-        tuple: Tuple with two functions, mhat and mr:
-            mhat (Function): BDF extrapolation of magnetization
-            mr (Function): BDF time derivative of magnetization
+        tuple: Extrapolated magnetization (mhat) and time derivative (mr).
     """
-
     assert len(mvac_bdf) == len(gamma), "Wrong number of BDF coefficients"
     assert len(mvac_bdf) == len(delta) - 1, "Wrong number of BDF coefficients"
 
@@ -78,6 +100,15 @@ def _assemble_lin_system(
     H_input=None,
     verbose=False,
 ):
+    """
+    Assemble the linear system for the LLG equation.
+
+    Args:
+        ...: Various inputs including mesh, coefficients, and function spaces.
+
+    Returns:
+        tuple: Assembled matrix (A) and vector (b).
+    """
     (v, lam) = ufl.TrialFunction(V3), ufl.TrialFunction(V)
     (phi, mu) = ufl.TestFunction(V3), ufl.TestFunction(V)
 
@@ -160,18 +191,43 @@ def _assemble_lin_system(
 
 
 def inf_sup(A, ip_V_isr, ip_V3_isr, verb_iter):
+    """
+    Compute the inf-sup constant for the linear system.
+
+    Args:
+        A (Matrix): Assembled matrix.
+        ip_V_isr (np.ndarray): Inverse square root of inner product matrix for V.
+        ip_V3_isr (np.ndarray): Inverse square root of inner product matrix for V3.
+        verb_iter (bool): Verbosity flag.
+
+    Returns:
+        float: Inf-sup constant.
+    """
     B = A.getNestSubMatrix(1, 0)
     B = B.getValues(range(0, B.getSize()[0]), range(0, B.getSize()[1]))
     beg_time = time.time()
     inf_sup_const = compute_inf_sup(B, ip_V3_isr, ip_V_isr, "sparse")
     end_time = time.time()
     if verb_iter:
-        print(f"Inf-sup: {inf_sup_const:.4e}",
-              f"(time: {end_time - beg_time:.4f}s)")
+        print(f"Inf-sup: {inf_sup_const:.4e}", f"(time: {end_time - beg_time:.4f}s)")
     return inf_sup_const
 
 
 def solve_linear_system(msh, A, b, V3, V, verbose=False):
+    """
+    Solve the linear system for the LLG equation.
+
+    Args:
+        msh (Mesh): Mesh object.
+        A (Matrix): Assembled matrix.
+        b (Vector): Assembled vector.
+        V3 (FunctionSpace): Function space for magnetization.
+        V (FunctionSpace): Function space for Lagrange multipliers.
+        verbose (bool, optional): Verbosity flag. Defaults to False.
+
+    Returns:
+        tuple: Solutions for magnetization (v) and Lagrange multipliers (lam).
+    """
     ksp = PETSc.KSP().create(msh.comm)
     ksp.setOperators(A)
     ksp.setType(PETSc.KSP.Type.GMRES)
@@ -191,6 +247,19 @@ def solve_linear_system(msh, A, b, V3, V, verbose=False):
 
 
 def update_m(V3, mr, tau, delta, v):
+    """
+    Update the magnetization using the BDF scheme.
+
+    Args:
+        V3 (FunctionSpace): Function space for magnetization.
+        mr (Function): Time derivative of magnetization.
+        tau (float): Time step size.
+        delta (list[float]): BDF coefficients.
+        v (Function): Solution vector.
+
+    Returns:
+        Function: Updated magnetization.
+    """
     m_new = Function(V3)
     m_new.x.array[:] = mr.x.array + tau / delta[0] * v.x.array
     return m_new
@@ -205,33 +274,15 @@ def BDF_FEM_TPS(
     ip_V_isr=[],
     ip_V3_isr=[],
 ):
-    """This is the same function as high_order_bdf_sllg but with modularized
-    code split into several sub-functions.
+    """
+    Solve the parametric LLG equation using BDF-FEM-TPS.
 
     Args:
-        data (dict): Dictionary with data to solve the problem. The keys are:
-            m0h (Function): Initial magnetization, as a V3 function.
-            alpha (float): Gilbert damping coefficient.
-            gh (Function): Space component noise. Already as a V3 function (see variable V3 below).
-            W (numpy.ndarray[float]): A Wiener process sample as an array foe valuation over time steps tt.
-            tt (np.ndarray): Time steps.
-            bdf_ord (int): BDF order.
-            V3 (FunctionSpace): Function space for the magnetization.
-            V (FunctionSpace): Function space for the Lagrange multiplier.
-        quadrature_degree (int, optional): Quadrature degree. Defaults to 0.
-        verbose (bool, optional): Print information. If int, log every verbose interations. If True, log all itnerations. Inf False, run silently. Defaults to False.
-        H_input (numpy.ndarray, optional): External magnetic field. Defaults to None.
-        compute_inf_sup (bool, optional): Compute inf-sup constant. Defaults to False.
-        ip_V_isr (numpy.ndarray[float], optional): Inverse square root of inner product matrix for V. Needed only to compute the inf-sup constant. Defaults to [].
-        ip_V3_isr (numpy.ndarray[float], optional): Inverse square root of inner product matrix for V. Needed only to compute the inf-sup constant. Defaults to [].
+        ...: Various inputs including data dictionary, quadrature degree, and verbosity.
 
     Returns:
-        list: List of magnetizations.
-        list: List of v functions. Shorter than mm by 1.
-        list: List of lam functions.  Shorter than mm by 1.
-        list: List of inf-sup constants over time steps. Shorter that mm by 1.
+        tuple: Magnetizations, velocity functions, Lagrange multipliers, and inf-sup constants.
     """
-
     # Handle verbosity: turn into int
     if verbose is True:  # log everything
         print_freq = 1
@@ -239,7 +290,7 @@ def BDF_FEM_TPS(
         print_freq = verbose
     else:  # False or unkonw verbosity value
         print_freq = 0
-    
+
     # Unpack data dictionary
     m0h = data["m0h"]
     alpha = data["alpha"]

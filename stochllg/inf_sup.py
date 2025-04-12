@@ -1,25 +1,30 @@
+"""
+Inf-sup constant computation.
+
+This module provides functions to compute the inf-sup constant for saddle point systems.
+
+Functions:
+    compute_inf_sup(B, M_isr, L_isr, type=None): Estimate the inf-sup constant using singular values.
+    estimate_inf_sup_const_EIGS(B, M, L): Estimate the inf-sup constant using eigenvalues.
+"""
+
 from math import sqrt
 import numpy as np
 import scipy
 
 
 def compute_inf_sup(B, M_isr, L_isr, type=None):
-    """Compute inf-sup constant as minimum positive singular value of an
-    appropriate matrix.
+    """
+    Estimate the inf-sup constant using singular values.
 
     Args:
-        B (np.ndarray[float]): Off diagonal matrix in position [0, 1] of saddle
-            point system.
-        M (np.ndarray[float]): Power -1/2 of matrix representing the scalar
-            product of primal variable.
-        L (np.ndarray[float]): Power -1/2 of matrix representing the scalar
-            product of Lagrange multipliers.
-        type (str): "sparse" or "dense" to choose the type of eigenvalue solver.
-            Default is None. In this case, a sparse method is chosen for
-            matrices with minimum dimension > 10. Dense otherwise.
+        B (np.ndarray): Off-diagonal matrix of the saddle point system.
+        M_isr (np.ndarray): Inverse square root of the primal scalar product matrix.
+        L_isr (np.ndarray): Inverse square root of the Lagrange multipliers scalar product matrix.
+        type (str, optional): "sparse" or "dense" SVD solver. Defaults to "sparse" for large matrices.
 
     Returns:
-        float: estimate inf-sup constant
+        float: Estimated inf-sup constant.
     """
 
     if type is None:
@@ -44,19 +49,16 @@ def compute_inf_sup(B, M_isr, L_isr, type=None):
 
 
 def estimate_inf_sup_const_EIGS(B, M, L):
-    """Compute inf-sup constant as sqrt minimum eigenvalue of appropriate
-    generalized eigenvalue problem.
+    """
+    Estimate the inf-sup constant using eigenvalues.
 
     Args:
-        B (np.ndarray[float]): Off diagonal matrix in position [1,0] of saddle
-            point system
-        M (np.ndarray[float]): Matrix representing the scalar product of primal
-            variable
-        L (np.ndarray[float]): Matrix representing the scalar product of
-            Lagrange multipliers
+        B (np.ndarray): Off-diagonal matrix of the saddle point system.
+        M (np.ndarray): Primal scalar product matrix.
+        L (np.ndarray): Lagrange multipliers scalar product matrix.
 
     Returns:
-        float: estimate inf-sup constant
+        float: Estimated inf-sup constant.
     """
 
     lhs_evp = np.dot(B, np.dot(np.linalg.inv(M), B.T))  # symmetric!
