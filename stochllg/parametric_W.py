@@ -60,7 +60,7 @@ def param_LC_W(tt, yy, T):
 
     return W
 
-def param_KL_Brownian_motion(tt, yy):
+def param_KL_W(tt, yy):
     """
     Construct the Wiener process using the Karhunen-Loeve expansion.
 
@@ -75,4 +75,29 @@ def param_KL_Brownian_motion(tt, yy):
     W = 0 * tt
     for n in range(len(yy)):
         W = W + pi*(n+0.5)*sqrt(2)*np.sin((n+0.5)*pi*tt)*yy[n]
+    return W
+
+def sample_W(tt):
+    """Sample the Browniann motion with the classical algorithm based on the
+    fact that for t_0 < t_1 <= t_2 < t_3, 
+      W(t_1)-W(t_0) ~ N(0, t_1-t_0) and 
+      W(t_3)-W(t_2) is independent from W(t_2)-W(t_1).
+
+    Args:
+        tt (numpy.ndarray[float]): 1D array of time steps. Entries are such that
+        tt[i] < tt[i+1] for all i.
+        The first entry must be 0.
+    """
+
+    # Check input
+    assert np.amin(tt) >= 0, "sample_W: tt must be positive"
+    assert len(tt) > 1, "sample_W: tt must have at least two entries"
+    assert np.all(np.diff(tt) > 0), "sample_W: tt must be strictly increasing"
+    assert tt[0] == 0, "sample_W: first entry of tt must be 0"
+
+    # Compute the increments
+    W = np.zeros_like(tt)
+    for i in range(1, len(tt)):
+        W[i] = W[i-1] + np.random.normal(0, sqrt(tt[i]-tt[i-1]))
+
     return W
