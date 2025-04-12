@@ -35,6 +35,8 @@ Run the examples from the root directory of the project with
 python3 examples/example_<name>.py
 ```
 
+Read the documentation at: [https://andreascaglioni.github.io/stochllg/](https://andreascaglioni.github.io/stochllg/)
+
 ## Features
 - Implementation of the Tangent Plane Scheme (TPS) as in the publication:
 
