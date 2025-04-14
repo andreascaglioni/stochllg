@@ -1,4 +1,5 @@
-"""Define data for the first example: A plain TPS simulation for fixed h and dt."""
+"""Define data for the first example: A plain TPS simulation for fixed h and dt.
+Similar to example in original paper. In aprticular, no noise"""
 
 from math import pi
 from os.path import join
@@ -11,17 +12,17 @@ from stochllg.utils import set_FE_data
 from stochllg.parametric_W import param_LC_W
 
 # Physics data
-alpha = 0.2
+alpha = 1.4
 T = 1
 
 
 def W_fun(tt, yy):
-    return param_LC_W(tt, yy, T=T)
+    return 0.*param_LC_W(tt, yy, T=T)
 
 
 def m0(x):  # IC
-    d = x[0]**2+x[1]**2
-    check = d <= 0.25
+    d = (x[0]-0.5)**2+(x[1]-0.5)**2
+    check = (d <= 0.25)
     m00 = np.where(check, x[0]-0.5, 0.)
     m01 = np.where(check, x[1]-0.5, 0.)
     m02 = np.sqrt(1.0 - np.square(m00) - np.square(m01))
@@ -29,19 +30,19 @@ def m0(x):  # IC
 
 
 def g(x):  # space component noise
-    sqr = np.square(x[0]) + np.square(x[1])
-    C = 0.6
+    # sqr = np.square(x[0]) + np.square(x[1])
+    # C = 0.6
     # g0 = C * np.sin(0.5 * pi * sqr) * x[0]
     # g1 = C * np.sin(0.5 * pi * sqr) * x[1]
     g0 = 0.*x[0]
-    g1 = 1.*x[0]
+    g1 = 0.*x[0]
     g2 = np.sqrt(1.0 - np.square(g0) - np.square(g1))
     return np.stack((g0, g1, g2))
 
 
 # Discretization space and time
 bdf_order = 1
-mesh_filename = join("data", "meshes_square", "mesh_square_10.xdmf")
+mesh_filename = join("data", "meshes_square", "mesh_square_20.xdmf")
 fem_order = 1
 comm = MPI.COMM_SELF
 
@@ -51,7 +52,8 @@ with XDMFFile(comm, mesh_filename, "r") as xdmf:
 
 # Time stepping data
 tau = 1.0e-2
-tt = np.linspace(0, T, int(T / tau) + 1)
+n_tt = int(T / tau) + 1
+tt = np.linspace(0, T, n_tt)
 
 data = {
     "m0": m0,
