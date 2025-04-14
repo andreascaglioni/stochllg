@@ -2,6 +2,9 @@ sphinx
 furo
 ghp-import
 pytest
+sphinxcontrib-bibtex
+sphinxcontrib-spelling 
+
 # aiohappyeyeballs @ file:///home/conda/feedstock_root/build_artifacts/aiohappyeyeballs_1733331917983/work
 # aiohttp @ file:///home/conda/feedstock_root/build_artifacts/aiohttp_1734596908135/work
 # aiosignal @ file:///home/conda/feedstock_root/build_artifacts/aiosignal_1734342155601/work
