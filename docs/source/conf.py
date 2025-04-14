@@ -51,3 +51,5 @@ bibtex_bibfiles = ['references.bib']
 
 # -- For code snippets in docstrings --------------------------------
 pygments_style = 'sphinx'
+
+html_outdir = 'html'
