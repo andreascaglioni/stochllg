@@ -1,4 +1,4 @@
-# stochastic-llg-equation
+# stochllg (Tangent Plane Scheme for the Stochastic Landau-Lifshitz-Gilbert Equation)
 
 ![Image](https://github.com/user-attachments/assets/2beba6ae-fa3b-482e-86e9-ba09b71bd37b)
 
