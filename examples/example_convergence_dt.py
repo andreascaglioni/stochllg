@@ -9,12 +9,11 @@ from os.path import join
 import numpy as np
 import matplotlib.pyplot as plt
 from mpi4py import MPI
-from dolfinx.io import XDMFFile
 
 sys.path.insert(0, "./")  # Import from this project
-from src.BDF_FEM_TPS import BDF_FEM_TPS
-from src.compute_mesh_elems_area import mesh_elems_area as mea
-from src.utils import (
+from stochllg.BDF_FEM_TPS import BDF_FEM_TPS
+from stochllg.utils import mesh_elems_area as mea
+from stochllg.utils import (
     error_space_time,
     export_xdmf,
     compute_rate,
@@ -29,25 +28,25 @@ if __name__ == "__main__":
 
     # PARAMETERS & DATA
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    dir_save = join("simulations", "BDF_FEM_conv_dt_" + date + "/")
+    dir_save = join("simulations", "TPS_conv_dt_" + date + "/")
     os.makedirs(dir_save)
     print("Saving results in:", dir_save)
     shutil.copy(__file__, join(dir_save, "script.txt"))
     from data.data_conv_dt import data  # noqa: E402
-
     shutil.copy(join("data", "data_conv_dt.py"), join(dir_save, "data.txt"))
 
     n_MC = 1
     dim_y = 1
-    MC_sample = np.random.randn(dim_y)
-    np.savetxt(join(dir_save, "MC_sample.csv"), MC_sample, delimiter=",")
-
-    ddt = 0.01 * np.power(2.0, -np.arange(1, 8))  # array of time step sizes
+    ddt = 0.01 * np.power(2.0, -np.arange(1, 8))
     msh = data["msh"]
     h = sqrt(np.min(mea(msh)))
     ip_V3 = data["ip_V3"]
+    print("")
 
     # COMPUTE
+    MC_sample = np.random.randn(dim_y)
+    np.savetxt(join(dir_save, "MC_sample.csv"), MC_sample, delimiter=",")
+    
     print("Sample reference solution")
     dt_ref = ddt[-1]  # reference time step size
     ddt = ddt[:-1]  # remove reference time step size
@@ -57,10 +56,9 @@ if __name__ == "__main__":
     # Add reference data to dictionary (make a deep copy)
     data["W"] = W_ref
     data["tt"] = tt_ref
-    data["dtdt"] = tt_ref[1:] - tt_ref[:-1]
     print("dt:", float_f(dt_ref), "h:", float_f(h))
     mm_ref, _, _, _ = BDF_FEM_TPS(data, verbose=int(tt_ref.size / 5))
-    xdmf = XDMFFile(comm, join(dir_save, "ref.xdmf"), "w")
+    export_xdmf(msh, mm_ref, tt_ref, join(dir_save, "m_ref.xdmf"))
     print("")
 
     print("Convergence Test:")
@@ -72,8 +70,7 @@ if __name__ == "__main__":
         tt = np.linspace(0, T, int(T / dt) + 1)
         data["W"] = data["W_fun"](tt, MC_sample)
         data["tt"] = tt
-        dtdt = tt[1:] - tt[:-1]
-
+        
         # Compute
         mm, _, _, is_tt = BDF_FEM_TPS(data)
 

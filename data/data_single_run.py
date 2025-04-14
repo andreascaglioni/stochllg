@@ -7,9 +7,8 @@ import numpy as np
 # Imports for dolfinx
 from mpi4py import MPI
 from dolfinx.io import XDMFFile
-from src.set_FE_data import set_FE_data
-
-from src.parametric_W import param_LC_W
+from stochllg.utils import set_FE_data
+from stochllg.parametric_W import param_LC_W
 
 # Physics data
 alpha = 1.4

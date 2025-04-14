@@ -52,12 +52,12 @@ from dolfinx.fem import (
     form,
     create_interpolation_data,
     element,
-    functionspace,
-    assemble_vector,
+    functionspace
 )
-from dolfinx.fem.petsc import assemble_matrix
+from dolfinx.fem.petsc import assemble_matrix, assemble_vector
 import ufl
 from ufl import dx, grad, inner, TrialFunction, TestFunction
+from basix.ufl import element
 
 
 def compute_rate(xx, yy):
@@ -227,7 +227,7 @@ def error_space_time(
 
     # Guarantee that U and u_exa are defined on the same time steps tt_exa
     tt_different = tt.size < tt_exa.size or (
-        tt.size == tt_exa.size and np.linalg.norm(tt - tt_exa) > 1.0e-10
+        tt.size == tt_exa.size and np.linalg.norm(tt - tt_exa) > 1.e-10
     )
     if tt_different:
         U_intdata = np.array([U_in[i].x.array for i in range(len(U_in))])
@@ -244,7 +244,7 @@ def error_space_time(
         # Guarantee that U and U_exa are in same FE space
         if not matching_x_spaces:
             f_V.x.array[:] = U_dofs[i]
-            f_Vexa.interpolate_nonmatching(f_V, cells, interpolation_data)
+            f_Vexa.interpolate_nonmatching(f_V, None, interpolation_data)
         elif V == V_exa:  # the FE spaces are the same
             f_Vexa.x.array[:] = U_dofs[i]
         else:  # the FE spaces are matching but not the same
@@ -255,14 +255,14 @@ def error_space_time(
         f_Vexa.x.array[:] -= u_exa[i].x.array
         err_tt[i] = ip_norm(f_Vexa.x.array, A=ip_matrix)
 
-    # Compute sapce+time error
+    # Compute space+time error
     dtdt = tt_exa[1:] - tt_exa[:-1]
     if t_error_type == "L2":
         err = sqrt(np.sum(dtdt * (err_tt[1:] ** 2)))
     elif t_error_type == "L1":
         err = np.sum(dtdt * err_tt)
     elif t_error_type == "Linf":
-        err = np.max(err_tt)
+        err = np.amax(err_tt)
     else:
         raise ValueError("Unknown time error type")
 
@@ -341,7 +341,7 @@ def set_FE_data(msh, data):
     gh = Function(V3)
     gh.interpolate(lambda x: data["g"](x))
 
-    # Deep-copy data inot new dictionary and add FE data
+    # Deep-copy data into new dictionary and add FE data
     data_out = deepcopy(data)
     data_out["m0h"] = m0h
     data_out["gh"] = gh

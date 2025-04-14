@@ -99,7 +99,7 @@ if __name__ == "__main__":
             mm,
             tt,
             ip_V3_ref,
-            matching_x_spaces=False,
+            matching_x_spaces=True,
             data_nonmatch=data_nonmatch,
             t_error_type="Linf",
         )
