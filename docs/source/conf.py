@@ -22,7 +22,8 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.mathjax',
     'sphinxcontrib.bibtex',
-    'sphinx.ext.autodoc'
+    'sphinx.ext.autodoc',
+    'sphinx.ext.viewcode'
     # 'sphinxcontrib.spelling'
 ]
 
