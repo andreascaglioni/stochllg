@@ -31,15 +31,16 @@ if __name__ == "__main__":
     mesh_comm = MPI.COMM_WORLD
 
     nn_el = 2 ** np.arange(2, 9)  # number of elements per side
+    edge_length = 1.0
     for n_el in nn_el:
-        char_length = 1 / n_el
+        char_length = edge_length / n_el
         model, gdim = generate_gmsh_square(char_length=char_length)
         domain, cell_markers, facet_markers = gmshio.model_to_mesh(
             gmsh.model, mesh_comm, gmsh_model_rank, gdim=gdim
         )
         xdmf = XDMFFile(
             domain.comm,
-            "meshes_square/msh_test_square_" + str(n_el) + ".xdmf",
+            "meshes_square_gmsh/msh_test_square_" + str(n_el) + ".xdmf",
             "w",
         )
         xdmf.write_mesh(domain)
