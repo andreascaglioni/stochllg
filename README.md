@@ -60,6 +60,7 @@ exporting solutions to .XDMF files.
    - [ ] High order version of the TPS,
    - [ ] More examples (external magnetic field, hysteresis, Skyrmions, ...),
    - [ ] Autormated Testing with *GitHub Actions*
+   - [ ] Plot the initial condition m_0, the noise space correlation g, the effective field H_eff as .xdmf files
 
 ## Contributing
 Contributions are welcome! Please get in touch (see [Contact](#contact)).
