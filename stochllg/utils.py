@@ -244,7 +244,7 @@ def error_space_time(
         # Guarantee that U and U_exa are in same FE space
         if not matching_x_spaces:
             f_V.x.array[:] = U_dofs[i]
-            f_Vexa.interpolate_nonmatching(f_V, None, interpolation_data)
+            f_Vexa.interpolate_nonmatching(f_V, cells, interpolation_data)
         elif V == V_exa:  # the FE spaces are the same
             f_Vexa.x.array[:] = U_dofs[i]
         else:  # the FE spaces are matching but not the same
