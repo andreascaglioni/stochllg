@@ -11,17 +11,27 @@ alpha = 1.4
 T = 1
 
 
-def W_fun(t, y):  # Wiener process NO NOISE
-    return 0.*param_LC_W(t, y, T=T)
+def W_fun(t, y):  # Wiener process
+    return param_LC_W(t, y, T=T)
 
 
 def m0(x):
-    d = (x[0]-0.5)**2+(x[1]-0.5)**2
-    check = (d <= 0.25)
-    m00 = np.where(check, x[0]-0.5, 0.)
-    m01 = np.where(check, x[1]-0.5, 0.)
+    # EXAMPLE 1
+    # C = 400
+    # d = (x[0]-0.5)**2+(x[1]-0.5)**2
+    # check = (d <= 0.25)
+    # m00 = np.where(check, C*np.exp(1./(0.25-d))*(x[0]-0.5), 0.)
+    # m01 = np.where(check, C*np.exp(1./(0.25-d))*(x[1]-0.5), 0.)
+    # EXAMPLE 2
+    # m00 = np.where(check, x[0]-0.5, 0.)
+    # m01 = np.where(check, x[1]-0.5, 0.)
+    # EXAMPLE 3
     # m00 = 0.*x[0]
     # m01 = 0.*x[1]
+    # EXAMPLE 4
+    C = 0.9
+    m00 = C * (x[0] - 0.5)
+    m01 = C * (x[1] - 0.5)
     m02 = np.sqrt(1.0 - np.square(m00) - np.square(m01))
     return np.stack((m00, m01, m02))
 
@@ -29,8 +39,8 @@ def m0(x):
 def g(x):  # space component noise
     sqr = np.square(x[0]) + np.square(x[1])
     C = 0.6
-    g0 = C * np.sin(0.5 * pi * sqr) * x[0]
-    g1 = C * np.sin(0.5 * pi * sqr) * x[1]
+    g0 = C * np.sin(0.5 * pi * sqr) * (x[0]-0.5)
+    g1 = C * np.sin(0.5 * pi * sqr) * (x[1]-0.5)    
     g2 = np.sqrt(1.0 - np.square(g0) - np.square(g1))
     return np.stack((g0, g1, g2))
 
@@ -43,7 +53,7 @@ comm = MPI.COMM_SELF
 # FE data removed because computed at run-time
 
 # Time stepping data
-tau = 1.0e-2
+tau = 5.e-3
 n_tt = int(T / tau) + 1
 tt = np.linspace(0, T, n_tt)
 

@@ -2,25 +2,9 @@ r"""Convergence of the TPS (tangent plane scheme) with respect to both mesh size
 Time step and mesh size must satisfy the condition tau < C h to guarantee stability (CFL condition).
 The expected convergence rate of the L^{infty}(0,T, H^1(D)) error is O(h + dt) or
 \Vert m - m_{h, \tau}\Vert_{L^{infty}(0,T, H^1(D))} \leq C (h+\tau)
+
+WARNING: Approximating the disk by mesh refinement introduces a geometric approximation error that reduces the ocnvergence rate O(h) to about O(h^0.4).
 """
-
-
-# WARNING
-# Converengece is LESS thant the expected odeer 1 because mesh refinement implies
-# better approximation fo the circle.
-#  Those mehs vertices that lie in the reference mesh but not in the smaller ones,
-# give LARGE error.
-# Solution: Finx a geeometry once and for all, then define mehses with SAME
-# outer oundary!!!!!!!!!!!!!!!!!!!!!
-
-# END WARNING
-
-
-
-
-
-
-
 
 
 from math import sqrt

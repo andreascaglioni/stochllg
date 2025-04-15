@@ -48,7 +48,7 @@ if __name__ == "__main__":
     dim_y = 1
     tt = data_nomsh["tt"]
     tau_max = np.amax(tt[1:] - tt[:-1])
-    idxs_meshes = np.arange(0, 4)  # use 4 meshes, last REFERENCE
+    idxs_meshes = np.arange(0, 5)  # last REFERENCE
     print("Indices meshes:", idxs_meshes, "(last used as reference)")
     print("")
 
@@ -58,8 +58,10 @@ if __name__ == "__main__":
     data_nomsh["W"] = data_nomsh["W_fun"](tt, MC_sample)
 
     print("Sample reference solution")
-    N_elems_ref = 4*2**idxs_meshes[-1]
-    ref_mesh_filename = join("data", "meshes_square", f"mesh_square_{N_elems_ref}.xdmf")
+    N_elems_ref = 4 * 2 ** idxs_meshes[-1]
+    ref_mesh_filename = join(
+        "data", "mesh_square_structured", f"mesh_square_{N_elems_ref}.xdmf"
+    )
     idxs_meshes = idxs_meshes[:-1]
     with XDMFFile(comm, ref_mesh_filename, "r") as xdmf:
         msh_ref = xdmf.read_mesh()
@@ -82,7 +84,9 @@ if __name__ == "__main__":
     for i, msh_idx in enumerate(idxs_meshes):
         # Load mesh and compute mesh data
         n_elems = 4 * 2**msh_idx
-        mesh_filename = join("data", "meshes_square", f"mesh_square_{n_elems}.xdmf")
+        mesh_filename = join(
+            "data", "mesh_square_structured", f"mesh_square_{n_elems}.xdmf"
+        )
         with XDMFFile(comm, mesh_filename, "r") as xdmf:
             msh = xdmf.read_mesh()
         data = set_FE_data(msh, data_nomsh)
@@ -99,7 +103,7 @@ if __name__ == "__main__":
             mm,
             tt,
             ip_V3_ref,
-            matching_x_spaces=True,
+            matching_x_spaces=False,
             data_nonmatch=data_nonmatch,
             t_error_type="Linf",
         )
@@ -107,11 +111,11 @@ if __name__ == "__main__":
         print(r"L^{\infty}(0, T, H^1(D)) error:", float_f(err_tx[i]))
         print("")
 
-        # Export sequence time errors
+        # Export
         np.savetxt(join(dir_save, f"error_tt_{msh_idx}.csv"), err_tt, delimiter=",")
         export_xdmf(msh, mm, tt, join(dir_save, "m_" + str(msh_idx) + ".xdmf"))
 
-        # Plot seqauecne of time errors
+        # Plot sequence of time errors
         plt.figure("error_t")
         plt.semilogy(tt, err_tt, "-", label="h = " + float_f(hh[i]))
 
