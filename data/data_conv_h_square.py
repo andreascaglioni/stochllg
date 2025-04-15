@@ -1,5 +1,5 @@
-"""Data for h-converngece TPS. Data related to finite elements from mesh and
-discretization is removed. The data is set with function set_FE_data() at run time."""
+"""Data for h-converngece TPS. Data related to finite elements from mesh and discretization is removed. 
+The data is set with function set_FE_data() at run time."""
 
 from math import pi
 import numpy as np
@@ -11,15 +11,17 @@ alpha = 1.4
 T = 1
 
 
-def W_fun(t, y):  # Wiener process
+def W_fun(t, y):  # Wiener process NO NOISE
     return 0.*param_LC_W(t, y, T=T)
 
 
-def m0(x):  # IC
+def m0(x):
     d = (x[0]-0.5)**2+(x[1]-0.5)**2
     check = (d <= 0.25)
     m00 = np.where(check, x[0]-0.5, 0.)
     m01 = np.where(check, x[1]-0.5, 0.)
+    # m00 = 0.*x[0]
+    # m01 = 0.*x[1]
     m02 = np.sqrt(1.0 - np.square(m00) - np.square(m01))
     return np.stack((m00, m01, m02))
 
@@ -41,7 +43,7 @@ comm = MPI.COMM_SELF
 # FE data removed because computed at run-time
 
 # Time stepping data
-tau = 5.0e-3
+tau = 1.0e-2
 n_tt = int(T / tau) + 1
 tt = np.linspace(0, T, n_tt)
 
