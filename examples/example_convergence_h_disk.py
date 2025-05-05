@@ -43,7 +43,7 @@ if __name__ == "__main__":
     os.makedirs(dir_save)
     print("Saving results in:", dir_save)
     shutil.copy(__file__, join(dir_save, "script.txt"))
-    from data.data_conv_h import data as data_nomsh  # noqa: E402
+    from data.data_conv_h_disk import data as data_nomsh  # noqa: E402
 
     shutil.copy(join("data", "data_conv_h.py"), join(dir_save, "data.txt"))
 

@@ -249,8 +249,14 @@ def error_space_time(
             f_Vexa.x.array[:] = U_dofs[i]
         else:  # the FE spaces are matching but not the same
             f_V.x.array[:] = U_dofs[i]
-            f_Vexa.interpolate(f_V)
 
+
+
+            ###################### CHECK 
+            f_Vexa.interpolate(f_V) # SEGV!!!
+            ###################### CHECK
+
+            
         # Compute error in FE space
         f_Vexa.x.array[:] -= u_exa[i].x.array
         err_tt[i] = ip_norm(f_Vexa.x.array, A=ip_matrix)
@@ -297,7 +303,7 @@ def float_f(x):
 
 
 def mesh_elems_area(msh):
-    """Compute the size of the elements in a 2D mesh.
+    """Compute the area of the elements of a 2D mesh.
 
     Args:
         msh (dolfinxmesh.Mesh): Mesh

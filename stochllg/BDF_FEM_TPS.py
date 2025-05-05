@@ -179,10 +179,11 @@ def _assemble_lin_system(
                 )
             )
             * dxr,
-            inner(Constant(msh, PETSc.ScalarType(0)), mu) * dx,
+            inner(Constant(msh, PETSc.ScalarType(0)), mu) * dxr,
         ],
         jit_options=jit_opts,
     )
+
     # Assebly
     A = assemble_matrix_nest(lhs_eq)
     A.assemble()

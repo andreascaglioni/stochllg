@@ -1,7 +1,6 @@
 """Define data for the first example: A plain TPS simulation for fixed h and dt.
 Similar to example in original paper. In aprticular, no noise"""
 
-from math import pi
 from os.path import join
 import numpy as np
 
@@ -42,7 +41,7 @@ def g(x):  # space component noise
 
 # Discretization space and time
 bdf_order = 1
-mesh_filename = join("data", "meshes_square", "mesh_square_20.xdmf")
+mesh_filename = join("data", "mesh_square_structured", "mesh_square_16.xdmf")
 fem_order = 1
 comm = MPI.COMM_SELF
 

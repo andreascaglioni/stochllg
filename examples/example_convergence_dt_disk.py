@@ -32,7 +32,7 @@ if __name__ == "__main__":
     os.makedirs(dir_save)
     print("Saving results in:", dir_save)
     shutil.copy(__file__, join(dir_save, "script.txt"))
-    from data.data_conv_dt import data  # noqa: E402
+    from data.data_conv_dt_disk import data  # noqa: E402
     shutil.copy(join("data", "data_conv_dt.py"), join(dir_save, "data.txt"))
 
     n_MC = 1
