@@ -200,7 +200,7 @@ def error_space_time(
     """Compute error of two functions in space-time.
 
     Args:
-        u_exa (list[Function]): First function (the exat or reference one)
+        u_exa (list[Function]): First function (the exact or reference one)
         tt_exa (numpy.array[float]): Array of time steps of u_exa.
         U_in (list[Function]): Second function (the approximation of u_exa)
         dtdt (numpy.array[float]): Array of time step sizes. NB its length is ff.size-1!
