@@ -1,5 +1,5 @@
 """
-A high-order Tangent Plane Scheme for sampling (in time and space) the 
+A high-order Tangent Plane Scheme for sampling (in time and space) the
 stochastic Landau-Lifshitz-Gilbert (LLG) equation.
 
 This algorithm uses:
@@ -26,10 +26,15 @@ from scipy.special import comb
 
 # Import dolfinx and ufl
 import ufl
-from dolfinx import la
 from dolfinx.fem import Constant, Function, form
 from ufl import dx, grad, inner, cross, dot
-from dolfinx.fem.petsc import assemble_matrix_nest, assemble_vector_nest
+from dolfinx.fem.petsc import assemble_matrix_nest, assemble_vector_nest, LinearProblem
+from dolfinx.fem.petsc import assemble_matrix, assemble_vector
+from dolfinx import fem
+from dolfinx import la
+from basix.ufl import mixed_element, element
+from dolfinx import default_real_type
+
 
 # Import from this project
 from stochllg.inf_sup import compute_inf_sup
@@ -88,7 +93,7 @@ def compute_BDF(V3, gamma, delta, mvac_bdf):
     return mhat, mr
 
 
-def _assemble_lin_system(
+def _ass_lin_forms(
     msh,
     quad_deg,
     alpha,
@@ -103,15 +108,6 @@ def _assemble_lin_system(
     H_input=None,
     verbose=False,
 ):
-    """
-    Assemble the linear system for the LLG equation.
-
-    Args:
-        ...: Various inputs including mesh, coefficients, and function spaces.
-
-    Returns:
-        tuple: Assembled matrix (A) and vector (b).
-    """
     (v, lam) = ufl.TrialFunction(V3), ufl.TrialFunction(V)
     (phi, mu) = ufl.TestFunction(V3), ufl.TestFunction(V)
 
@@ -123,14 +119,8 @@ def _assemble_lin_system(
     if H_input is not None:
         H = Constant(H_input)
     else:
-        H = Constant(
-            msh,
-            (
-                PETSc.ScalarType(0.0),
-                PETSc.ScalarType(0.0),
-                PETSc.ScalarType(0.0),
-            ),
-        )
+        z = PETSc.ScalarType(0.0)
+        H = Constant(msh, (z, z, z))
     HH = -Cs * cross(H, gh) + Cc * cross(cross(H, gh), gh)
 
     # define LLG form
@@ -148,50 +138,97 @@ def _assemble_lin_system(
     }
 
     # TODO: split definition in several variables to make readable
+    grad_exp_phi = grad(phi + Cs * cross(phi, gh) + Cc * cross(cross(phi, gh), gh))
+    grad_exp_v = grad(v + Cs * cross(v, gh) + Cc * cross(cross(v, gh), gh))
+
+    lhs00 = (
+        alpha * inner(v, phi)
+        + inner(cross(mhat, v), phi)
+        + tau_norm * inner(grad_exp_v, grad_exp_phi)
+    ) * dxr
+    lhs01 = inner(dot(phi, mhat), lam) * dxr
+    lhs10 = inner(dot(v, mhat), mu) * dxr
+    lhs11 = None
     lhs_eq = form(
-        [
-            [
-                (
-                    alpha * inner(v, phi)
-                    + inner(cross(mhat, v), phi)
-                    + tau_norm
-                    * inner(
-                        grad(v + Cs * cross(v, gh) + Cc * cross(cross(v, gh), gh)),
-                        grad(
-                            phi + Cs * cross(phi, gh) + Cc * cross(cross(phi, gh), gh)
-                        ),
-                    )
-                )
-                * dxr,
-                inner(dot(phi, mhat), lam) * dxr,
-            ],
-            [inner(dot(v, mhat), mu) * dxr, None],
-        ],
+        [[lhs00, lhs01], [lhs10, lhs11]],
         jit_options=jit_opts,
     )
 
-    rhs_eq = form(
-        [
-            (
-                -inner(
-                    grad(mr + Cs * cross(mr, gh) + Cc * cross(cross(mr, gh), gh)),
-                    grad(phi + Cs * cross(phi, gh) + Cc * cross(cross(phi, gh), gh)),
-                )
-            )
-            * dxr,
-            inner(Constant(msh, PETSc.ScalarType(0)), mu) * dxr,
-        ],
-        jit_options=jit_opts,
-    )
+    grad_exp_mr = grad(mr + Cs * cross(mr, gh) + Cc * cross(cross(mr, gh), gh))
+    rhs0 = -inner(grad_exp_mr, grad_exp_phi) * dxr
+    rhs1 = inner(Constant(msh, PETSc.ScalarType(0)), mu) * dxr
+    rhs_eq = form([rhs0, rhs1], jit_options=jit_opts)
+    return lhs_eq, rhs_eq
 
-    # Assebly
+
+def _assemble_lin_system(lhs_eq, rhs_eq):
+    """
+    Assemble the linear system for the LLG equation.
+
+    Args:
+        ...: Various inputs including mesh, coefficients, and function spaces.
+
+    Returns:
+        tuple: Assembled matrix (A) and vector (b).
+    """
+
     A = assemble_matrix_nest(lhs_eq)
     A.assemble()
     b = assemble_vector_nest(rhs_eq)
-    end_time = time.time()
-    if verbose:
-        print(f"Assembly time: {end_time - beg_time:.4f}s")
     return A, b
+
+
+def assemble_linear_forms(
+    q_deg,
+    H_in,
+    alpha,
+    gh,
+    W_tcurr,
+    msh,
+    delta,
+    V_mix,
+    tau,
+    mhat,
+    mr,
+    verb_iter,
+):
+    (v, lam) = ufl.TrialFunctions(V_mix)
+    (phi, mu) = ufl.TestFunctions(V_mix)
+    Cs = Constant(msh, PETSc.ScalarType(np.sin(W_tcurr)))
+    Cc = Constant(msh, PETSc.ScalarType(1 - np.cos(W_tcurr)))
+    # build external magnetic field
+    # if H_in is not None:
+    #     H = Constant(H_in)
+    # else:
+    #     z = PETSc.ScalarType(0.0)
+    #     zv = (z, z, z)
+    #     H = Constant(msh, zv)
+    # HH = -Cs * cross(H, gh) + Cc * cross(cross(H, gh), gh)
+    # jit_opts = {
+    #     "cffi_extra_compile_args": ["-O3", "-march=native"],
+    #     "cffi_libraries": ["m"],
+    # }
+    tau_norm = Constant(msh, PETSc.ScalarType(tau / delta[0]))
+    dxr = dx(metadata={"quadrature_degree": q_deg})
+
+    beg_time = time.time()
+    grad_exp_v = grad(v + Cs * cross(v, gh) + Cc * cross(cross(v, gh), gh))
+    grad_exp_phi = grad(phi + Cs * cross(phi, gh) + Cc * cross(cross(phi, gh), gh))
+    a = (
+        alpha * inner(v, phi)
+        + inner(cross(mhat, v), phi)
+        + tau_norm * inner(grad_exp_v, grad_exp_phi)
+    ) * dxr
+    a += inner(dot(phi, mhat), lam) * dxr
+    a += inner(dot(v, mhat), mu) * dxr
+
+    grad_exp_mr = grad(mr + Cs * cross(mr, gh) + Cc * cross(cross(mr, gh), gh))
+    b = -inner(grad_exp_mr, grad_exp_phi) * dxr
+    b += inner(Constant(msh, PETSc.ScalarType(0)), mu) * dxr
+    end_time = time.time()
+    if verb_iter:
+        print(f"Assembly time: {end_time - beg_time:.4f}s", flush=True)
+    return a, b
 
 
 def inf_sup(A, ip_V_isr, ip_V3_isr, verb_iter):
@@ -199,7 +236,7 @@ def inf_sup(A, ip_V_isr, ip_V3_isr, verb_iter):
     Compute the inf-sup constant for the linear system.
 
     Args:
-        A (Matrix): Assembled matrix.
+        A (Matrix): Assembled full saddle point matrix with structure [[A, B.T][B, 0]].
         ip_V_isr (np.ndarray): Inverse square root of inner product matrix for V.
         ip_V3_isr (np.ndarray): Inverse square root of inner product matrix for V3.
         verb_iter (bool): Verbosity flag.
@@ -232,12 +269,12 @@ def solve_linear_system(msh, A, b, V3, V, verbose=False):
     Returns:
         tuple: Solutions for magnetization (v) and Lagrange multipliers (lam).
     """
-    ksp = PETSc.KSP().create(msh.comm)
+    from mpi4py import MPI
+    ksp = PETSc.KSP().create(MPI.COMM_SELF)
     ksp.setOperators(A)
     ksp.setType(PETSc.KSP.Type.GMRES)
     ksp.setFromOptions()
     # ksp.setTolerances(rtol=1e-9)
-
     v, lam = Function(V3), Function(V)
     x = PETSc.Vec().createNest(
         [la.create_petsc_vector_wrap(v.x), la.create_petsc_vector_wrap(lam.x)]
@@ -247,6 +284,37 @@ def solve_linear_system(msh, A, b, V3, V, verbose=False):
     end_time = time.time()
     if verbose:
         print(f"Solve time: {end_time - beg_time:.4f}s")
+    return v, lam
+
+
+def solve_linear_pb(a, b, verbose):
+    beg_time = time.time()
+    jit_opts = {
+        "cffi_extra_compile_args": ["-O3", "-march=native"],
+        "cffi_libraries": ["m"],
+    }
+    problem = LinearProblem(
+        a,
+        b,
+        petsc_options={"ksp_type": "gmres", "pc_type": "hypre"},
+        jit_options=jit_opts,
+    )
+    x = problem.solve()
+
+    # Check residual
+    A = assemble_matrix(form(a))
+    A.assemble()
+    A = A.getValues(range(0, A.getSize()[0]), range(0, A.getSize()[1]))
+    b_vec = assemble_vector(form(b))
+    r = b_vec.array - A * x.x.array
+    print("Residual linear solver:", np.linalg.norm(r) / np.linalg.norm(b_vec))
+
+    v, lam = x.sub(0).collapse(), x.sub(1).collapse()
+
+    end_time = time.time()
+    if verbose:
+        print(f"Solve time: {end_time - beg_time:.4f}s")
+
     return v, lam
 
 
@@ -279,8 +347,8 @@ def BDF_FEM_TPS(
     ip_V3_isr=[],
 ):
     """
-    Solve the parametric Landau-Lifshitz-Gilbert (LLG) equation using the 
-    Backward Differentiation Formula (BDF), Finite Element Method (FEM), 
+    Solve the parametric Landau-Lifshitz-Gilbert (LLG) equation using the
+    Backward Differentiation Formula (BDF), Finite Element Method (FEM),
     and Tangential Projection Scheme (TPS).
 
     Args:
@@ -295,21 +363,21 @@ def BDF_FEM_TPS(
             - **msh** (*Mesh*): The computational mesh.
             - **V3** (*FunctionSpace*): Function space for vector fields.
             - **V** (*FunctionSpace*): Function space for scalar fields.
-            
-        quadrature_degree (*int*, optional): Degree of quadrature used for numerical integration. 
+
+        quadrature_degree (*int*, optional): Degree of quadrature used for numerical integration.
             Defaults to 0, which uses the default quadrature degree.
         verbose (*bool* or *int*, optional): Controls verbosity of the output:
             - If `False`, no output is printed.
             - If `True`, detailed output is printed for every iteration.
             - If an integer, output is printed every `verbose` iterations.
             Defaults to `False`.
-        H_input (*Function*, optional): Optional input for an external magnetic field. 
+        H_input (*Function*, optional): Optional input for an external magnetic field.
             If `None`, no external field is applied. Defaults to `None`.
-        return_inf_sup (*bool*, optional): If `True`, computes and returns the inf-sup constants 
+        return_inf_sup (*bool*, optional): If `True`, computes and returns the inf-sup constants
             for the linear systems solved at each time step. Defaults to `False`.
-        ip_V_isr (*list*, optional): List of inverse square root inner products for the scalar 
+        ip_V_isr (*list*, optional): List of inverse square root inner products for the scalar
             function space *V*. Used for inf-sup constant computation. Defaults to an empty list.
-        ip_V3_isr (*list*, optional): List of inverse square root inner products for the vector 
+        ip_V3_isr (*list*, optional): List of inverse square root inner products for the vector
             function space *V3*. Used for inf-sup constant computation. Defaults to an empty list.
 
     Returns:
@@ -319,6 +387,7 @@ def BDF_FEM_TPS(
             - *list[Function]*: Lagrange multiplier functions at each time step (excluding the initial step).
             - *np.ndarray[float]*: Array of inf-sup constants for each time step (if `return_inf_sup` is `True`).
     """
+
     # Handle verbosity: turn into int
     if verbose is True:  # log everything
         print_freq = 1
@@ -343,16 +412,17 @@ def BDF_FEM_TPS(
     n_tt = tt.size
     gamma, delta = coeffs_bdf(bdf_order)
 
+    # Time iteration
     # TODO do not store a list of Functions, rather 1 function (IC) and DOFS
     mm = [Function(V3) for _ in range(n_tt)]  # coordinates magnetization
     mm[0].x.array[:] = m0h.x.array
     vv = [Function(V3) for _ in range(n_tt - 1)]
     ll = [Function(V) for _ in range(n_tt - 1)]
     inf_sup_t = np.zeros(n_tt - 1)
+
     for j in range(bdf_order, n_tt):
         # verbosity this iteration
         verb_iter = (print_freq > 0) and (j % print_freq == 0)
-
         if verb_iter:
             print("Iteration", j, flush=True)
 
@@ -360,7 +430,8 @@ def BDF_FEM_TPS(
 
         mhat, mr = compute_BDF(V3, gamma, delta, mm[j - bdf_order : j])
 
-        A, b = _assemble_lin_system(
+        # METHOD 1: PETSC ######################################################
+        a, b = _ass_lin_forms(
             msh,
             quadrature_degree,
             alpha,
@@ -372,17 +443,44 @@ def BDF_FEM_TPS(
             W[j],
             V3,
             V,
-            H_input,
-            verb_iter,
+            H_input=None,
+            verbose=False,
         )
+        A, b = _assemble_lin_system(a, b)
+        v, lam = solve_linear_system(msh, A, b, V3, V, verbose=False)
+
+        # METHOD 2 #############################################################
+        # Define mixed space
+        # Pr = element("Lagrange", msh.basix_cell(), data["fem_order"])
+        # Pr3 = element("Lagrange", msh.basix_cell(), data["fem_order"], shape=(3,))
+        # P_mix = mixed_element([Pr3, Pr])
+        # V_mix = fem.functionspace(msh, P_mix)
+        # a, b = assemble_linear_forms(
+        #     quadrature_degree,
+        #     H_input,
+        #     alpha,
+        #     gh,
+        #     W[j],
+        #     msh,
+        #     delta,
+        #     V_mix,
+        #     tau,
+        #     mhat,
+        #     mr,
+        #     verb_iter,
+        # )
+        # v, lam = solve_linear_pb(a, b, verb_iter)
+        ########################################################################
 
         if return_inf_sup:
+            # A = assemble_matrix_nest(a)
+            # A.assemble()
             inf_sup_t[j - 1] = inf_sup(A, ip_V_isr, ip_V3_isr, verb_iter)
 
-        v, lam = solve_linear_system(msh, A, b, V3, V, verb_iter)
         m_new = update_m(V3, mr, tau, delta, v)
 
         mm[j].x.array[:] = m_new.x.array
         vv[j - 1].x.array[:] = v.x.array
         ll[j - 1].x.array[:] = lam.x.array
+
     return mm, vv, ll, inf_sup_t

@@ -53,7 +53,8 @@ if __name__ == "__main__":
     ddt = ddt[:-1]  # remove reference time step size
     T = data["T"]
     tt_ref = np.linspace(0, T, int(T / dt_ref) + 1)
-    W_ref = data["W_fun"](tt_ref, MC_sample)
+    WW = data["W_fun"](MC_sample, tt_ref)
+    W_ref = WW[0]
     # Add reference data to dictionary
     data["W"] = W_ref
     data["tt"] = tt_ref
@@ -69,7 +70,8 @@ if __name__ == "__main__":
 
         # Overwrite data dict for next simulation
         tt = np.linspace(0, T, int(T / dt) + 1)
-        data["W"] = data["W_fun"](MC_sample, tt)
+        WW = data["W_fun"](MC_sample, tt)
+        data["W"] = WW[0]
         data["tt"] = tt
 
         # Compute
