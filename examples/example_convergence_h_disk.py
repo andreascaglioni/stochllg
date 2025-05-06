@@ -58,7 +58,7 @@ if __name__ == "__main__":
     # COMPUTE
     MC_sample = np.random.randn(dim_y)
     np.savetxt(join(dir_save, "MC_sample.csv"), MC_sample, delimiter=",")
-    data_nomsh["W"] = data_nomsh["W_fun"](tt, MC_sample)
+    data_nomsh["W"] = data_nomsh["W_fun"](MC_sample, tt)
 
     print("Sample reference solution")
     ref_mesh_filename = join("data", "meshes", f"disk_2D_{idxs_meshes[-1]}.xdmf")

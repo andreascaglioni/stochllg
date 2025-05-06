@@ -129,7 +129,7 @@ def param_LC_W_DEPRECATED(tt, yy, T):
     return W
 
 
-def param_KL_W(tt, yy):
+def param_KL_W(yy, tt):
     """
     Construct the Wiener process using the Karhunen-Loeve expansion.
 

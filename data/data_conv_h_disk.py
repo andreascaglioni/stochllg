@@ -11,8 +11,8 @@ alpha = 1.4
 T = 1
 
 
-def W_fun(t, y):  # Wiener process
-    return 0*param_LC_W(t, y, T)
+def W_fun(yy, tt):  # Wiener process
+    return 0*param_LC_W(yy, tt, T)
 
 
 def m0(x):  # IC

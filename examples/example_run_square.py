@@ -30,9 +30,9 @@ if __name__ == "__main__":
     os.makedirs(dir_save)
     print("Saving results in:", dir_save)
     shutil.copy(__file__, join(dir_save, "script.txt"))
-    from data.data_1 import data  # noqa: E402
+    from data.data_single_run_square import data  # noqa: E402
 
-    shutil.copy(join("data", "data_1.py"), join(dir_save, "data.txt"))
+    shutil.copy(join("data", "data_single_run_square.py"), join(dir_save, "data.txt"))
 
     n_MC = 1
     dim_y = 1
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # COMPUTE
     print("Sample reference solution")
     # Add reference data to dictionary (make a deep copy)
-    data["W"] = data["W_fun"](tt, MC_sample)
+    data["W"] = data["W_fun"](MC_sample, tt)
     print("Max dt:", float_f(dt))
     print("Min mesh size h:", float_f(h))
     mm, vv, ll, is_tt_ref = BDF_FEM_TPS(data, verbose=int(tt.size / 10))

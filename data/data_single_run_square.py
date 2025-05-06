@@ -15,7 +15,7 @@ alpha = 1.4
 T = 1
 
 
-def W_fun(tt, yy):
+def W_fun(yy, tt):
     return 0.*param_LC_W(tt, yy, T=T)
 
 

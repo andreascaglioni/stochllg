@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
         # Extract and store data in new data dict
         tt = np.linspace(0, T, int(T / dt) + 1)
-        data["W"] = data["W_fun"](tt, MC_sample)
+        data["W"] = data["W_fun"](MC_sample, tt)
         data["tt"] = tt
         
         # Compute

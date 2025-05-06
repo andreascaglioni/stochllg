@@ -55,7 +55,9 @@ if __name__ == "__main__":
     # COMPUTE
     MC_sample = np.random.randn(dim_y)
     np.savetxt(join(dir_save, "MC_sample.csv"), MC_sample, delimiter=",")
-    data_nomsh["W"] = data_nomsh["W_fun"](tt, MC_sample)
+    W = data_nomsh["W_fun"](MC_sample, tt)
+    # Add rank 1 array to data (because BDF_FEM_TPS only handles 1 sample at a time)
+    data_nomsh["W"] = np.squeeze(W)
 
     print("Sample reference solution")
     N_elems_ref = 4 * 2 ** idxs_meshes[-1]
