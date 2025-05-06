@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # COMPUTE
     print("Sample reference solution")
     # Add reference data to dictionary (make a deep copy)
-    data["W"] = data["W_fun"](tt, MC_sample)
+    data["W"] = data["W_fun"](MC_sample, tt)
     print("Max dt:", float_f(dt))
     print("Min mesh size h:", float_f(h))
     mm, vv, ll, is_tt_ref = BDF_FEM_TPS(data, verbose=int(tt.size / 10))
