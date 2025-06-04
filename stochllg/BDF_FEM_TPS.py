@@ -88,8 +88,13 @@ def compute_BDF(V3, gamma, delta, mvac_bdf):
         mhat.x.array[:] = mhat.x.array + gamma[i] * mvac_bdf[bdf_ord - 1 - i].x.array
         mr.x.array[:] = mr.x.array - delta[i + 1] * mvac_bdf[bdf_ord - 1 - i].x.array
     mr.x.array[:] = mr.x.array / delta[0]
-    sq_norm_mhat = np.linalg.norm(mhat.x.array, ord=2)
-    mhat.x.array[:] = mhat.x.array / sq_norm_mhat
+
+    # Normalize mhat by dividing in each vertex by the l2 norm there
+    mhat_magnitude = ufl.sqrt(mhat[0] ** 2 + mhat[1] ** 2 + mhat[2] ** 2)
+    mhat_n = Function(V3)
+    mhat_n.interpolate(
+        Expression(mhat / mhat_magnitude, V3.element.interpolation_points())
+    )
     return mhat, mr
 
 
