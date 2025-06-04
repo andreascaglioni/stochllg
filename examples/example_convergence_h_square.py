@@ -1,7 +1,8 @@
 r"""Convergence of the TPS (tangent plane scheme) with respect to both mesh size h and time step size dt.
-Time step and mesh size must satisfy the condition tau < C h to guarantee stability (CFL condition).
-The expected convergence rate of the L^{infty}(0,T, H^1(D)) error is O(h + dt) or
-\Vert m - m_{h, \tau}\Vert_{L^{infty}(0,T, H^1(D))} \leq C (h+\tau)
+Time step and mesh size must satisfy the mild CFL condition: 
+\exists C>0 : tau < C h.
+The expected convergence rate of the L^{infty}(0,T, H^1(D)) error is O(h + dt), i.e.
+\Vert m - m_{h, \tau}\Vert_{L^{infty}(0,T, H^1(D))} \leq C (h+\tau).
 """
 
 from math import sqrt
@@ -48,7 +49,7 @@ if __name__ == "__main__":
     dim_y = 1
     tt = data_nomsh["tt"]
     tau_max = np.amax(tt[1:] - tt[:-1])
-    idxs_meshes = np.arange(0, 5)  # last REFERENCE
+    idxs_meshes = np.arange(0, 4)  # last REFERENCE
     print("Indices meshes:", idxs_meshes, "(last used as reference)")
     print("")
 
@@ -81,8 +82,10 @@ if __name__ == "__main__":
 
     print("Convergence Test:")
     err_tx = np.zeros(len(idxs_meshes))
+    min_isc = np.zeros(len(idxs_meshes))
     hh = np.zeros_like(err_tx)
     ddt = np.ones_like(err_tx) * tau_max
+
     for i, msh_idx in enumerate(idxs_meshes):
         # Load mesh and compute mesh data
         n_elems = 4 * 2**msh_idx
@@ -94,8 +97,12 @@ if __name__ == "__main__":
         data = set_FE_data(msh, data_nomsh)
         hh[i] = sqrt(np.amin(mea(msh)))
 
+        ip_V = data["ip_V"]  # inverse_sqrt(data["ip_V"])
+        ip_V3_inverse =  np.linalg.inv(data["ip_V3"])  # inverse_sqrt(data["ip_V3"])
+
         print("Compute discrete solution h:", float_f(hh[i]), "dt:", float_f(ddt[i]))
-        mm, _, _, is_tt = BDF_FEM_TPS(data)
+        mm, _, _, is_tt = BDF_FEM_TPS(data, return_inf_sup=True, 
+                                      ip_V=ip_V, ip_V3_inverse=ip_V3_inverse)
 
         # Compute error
         data_nonmatch = compute_data_nonmatch_interpol(data_ref["V3"], data["V3"])
@@ -109,29 +116,38 @@ if __name__ == "__main__":
             data_nonmatch=data_nonmatch,
             t_error_type="Linf",
         )
-
+        min_isc[i] = np.amin(is_tt)
+        
         print(r"L^{\infty}(0, T, H^1(D)) error:", float_f(err_tx[i]))
+        print("Min inf-sup:", min_isc[i])
         print("")
 
         # Export
         np.savetxt(join(dir_save, f"error_tt_{msh_idx}.csv"), err_tt, delimiter=",")
+        np.savetxt(join(dir_save, f"isc_t_{msh_idx}.csv"), is_tt, delimiter=",")
         export_xdmf(msh, mm, tt, join(dir_save, "m_" + str(msh_idx) + ".xdmf"))
 
         # Plot sequence of time errors
         plt.figure("error_t")
         plt.semilogy(tt, err_tt, "-", label="h = " + float_f(hh[i]))
 
+        # Plot inf-sup 
+        plt.figure("isc_t")
+        plt.semilogy(tt[:-1], is_tt, ".-", label="h = " + float_f(hh[i]))
+        
+
     # POST-PROCESS
     # print
-    print("h: ", hh, "reference: ", float_f(h_ref))
+    print("h: ", hh)  # , "reference: ", float_f(h_ref))
     print("dt:", ddt)
     print("Error L^inf(0, T, H^1(D)):", err_tx)
     rate = compute_rate(hh, err_tx)
     print("Convergence rate:", rate)
+    print("Min inf-sup:", min_isc)
 
     # Export data convergence
-    A = np.vstack((hh, ddt, err_tx)).T
-    np.savetxt(join(dir_save, "conv_data.csv"), A, delimiter=",", header="h, dt, error")
+    A = np.vstack((hh, ddt, err_tx, min_isc)).T
+    np.savetxt(join(dir_save, "conv_data.csv"), A, delimiter=",", header="h, dt, error, min inf-sup")
 
     # Plot
     plt.figure("error")
@@ -150,5 +166,11 @@ if __name__ == "__main__":
     plt.title("H^1(D) error over time steps")
     plt.legend()
     plt.savefig(join(dir_save, "error_t.png"))
+
+    plt.figure("isc_t")
+    plt.xlabel("t")
+    plt.title("inf-sup constant over time steps")
+    plt.legend()
+    plt.savefig(join(dir_save, "inf_sup_t.png"))
 
     plt.show()
