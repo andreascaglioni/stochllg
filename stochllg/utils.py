@@ -343,9 +343,9 @@ def set_FE_data(msh, data):
     V = functionspace(msh, Pr)
     V3 = functionspace(msh, Pr3)
     m0h = Function(V3)
-    m0h.interpolate(lambda x: data["m0"](x))
+    m0h.interpolate(data["m0"])
     gh = Function(V3)
-    gh.interpolate(lambda x: data["g"](x))
+    gh.interpolate(data["g"])
 
     # Deep-copy data into new dictionary and add FE data
     data_out = deepcopy(data)
