@@ -21,7 +21,7 @@ def compute_inf_sup(B, M_isr, L_isr, type=None):
     Args:
         B (np.ndarray[float]): Off-diagonal matrix of the saddle point system.
         M_isr (np.ndarray[float]): Inverse square root of the primal scalar product matrix.
-        L_isr (np.ndarray[float]): Inverse square root of the Lagrange multipliers scalar product matrix.
+        L_isr (np.ndarray[float]): Inverse square root of the Lagrange multipliers' scalar product matrix.
         type (str, optional): "sparse" or "dense" SVD solver. Defaults to "sparse" for large matrices.
 
     Returns:
@@ -44,29 +44,34 @@ def compute_inf_sup(B, M_isr, L_isr, type=None):
         else:
             raise ValueError("Unknown type:", type, "for SVD algorithm.")
         return np.amin(s_vals)
-    except:
-        # print("Warning: Cannot find minimal singular value. Returing NaN")
+    except Exception as e:
+        print("Error during SVD computation:", e)
+        print("Cannot compute minimal singular value. Returing NaN")
         return float("nan")
 
 
-def estimate_inf_sup_const_EIGS(B, M, L):
+def estimate_inf_sup_const_EIGS(B, M_inverse, L, verbose=False):
     """
     Estimate the inf-sup constant using eigenvalues.
 
     Args:
         B (np.ndarray[float]): Off-diagonal matrix of the saddle point system.
-        M (np.ndarray[float]): Primal scalar product matrix.
+        M (np.ndarray[float]): Inverse of primal scalar product matrix.
         L (np.ndarray[float]): Lagrange multipliers scalar product matrix.
 
     Returns:
         float: Estimated inf-sup constant.
     """
-
-    lhs_evp = np.dot(B, np.dot(np.linalg.inv(M), B.T))  # symmetric!
+    # M_inverse = np.linalg.inv(M)
+    lhs_evp = np.dot(B, np.dot(M_inverse, B.T))  # symmetric!
+    
     # Estimate 10 smalles eig.values with method for symmetric matrices
     eigs, _ = scipy.sparse.linalg.eigsh(A=lhs_evp, k=10, M=L, sigma=0.0)
-    print("Small eigenvalues (max 10):", eigs[0 : min(10, eigs.size)])
+    if verbose:
+        print("Smallest eigenvalues (max 10):", eigs[0 : min(10, eigs.size)])
+    
     min_eig = np.amin(eigs)
-    assert min_eig > 0
+    assert min_eig > 0, f"Error: Minimum eigenvalue is negative: {min_eig}"
     inf_sup_c = sqrt(min_eig)
+    
     return inf_sup_c
