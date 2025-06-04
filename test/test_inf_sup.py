@@ -11,8 +11,8 @@ import basix
 
 
 sys.path.insert(0, "./")  # Import from this project
-from stochllg.inf_sup import compute_inf_sup
-from stochllg.utils import inverse_sqrt, get_H1_matrix, get_L2_matrix, float_f
+from stochllg.inf_sup import estimate_inf_sup_const_EIGS
+from stochllg.utils import get_H1_matrix, get_L2_matrix, float_f
 from stochllg.utils import mesh_elems_area as mea
 
 
@@ -45,10 +45,6 @@ def compute_infsup_tps_sys(msh, fem_order, m):
     # ip_V3_isr = inverse_sqrt(ip_V3)
     
     # Compute inf-sup
-    
-    # isc = compute_inf_sup(B, ip_V3_isr, ip_V_isr, "sparse")
-    
-    from stochllg.inf_sup import estimate_inf_sup_const_EIGS
     ip_V3_inv = np.linalg.inv(ip_V3)
     isc = estimate_inf_sup_const_EIGS(B, ip_V3_inv, ip_V)
     return isc
