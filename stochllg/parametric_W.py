@@ -26,10 +26,11 @@ def param_LC_W(yy, tt, T):
         numpy.ndarray[float]: 2D array. Each *ROW* is a sample path of W over tt.
     """
 
-
-    if yy.size == 1 or yy is int:  # 1 elemeent
+    # Check input shape and make it 2D
+    if yy.size == 1 or yy is int:  # 1-element array
         yy = np.array([yy], dtype=float).reshape((1, 1))
-
+    if len(yy.shape) == 1:  # 1 parameter vector
+        yy = np.array([yy], dtype=float).reshape((1, yy.size))
     assert len(yy.shape) == 2, (
         "param_LC_Brownian_motion: yy must be 2D (1 ROW per sample array)"
     )
