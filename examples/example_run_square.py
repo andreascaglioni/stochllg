@@ -10,12 +10,13 @@ import shutil
 from os.path import join
 import numpy as np
 from mpi4py import MPI
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, "./")  # Import from this project
 from stochllg.BDF_FEM_TPS import BDF_FEM_TPS
 from stochllg.utils import mesh_elems_area as mea
 from stochllg.utils import export_xdmf, float_f
-
+from stochllg.utils import error_unit_modulus
 
 if __name__ == "__main__":
     # SETTINGS
@@ -48,7 +49,20 @@ if __name__ == "__main__":
     
     mm, vv, ll, is_tt_ref = BDF_FEM_TPS(data, verbose=int(tt.size / 10))
     
+    # POST-PROCESSING
+    # Export
     np.savetxt(join(dir_save, "MC_sample.csv"), MC_samples, delimiter=",")
     export_xdmf(msh, mm, tt, join(dir_save, "m.xdmf"))
     export_xdmf(msh, vv, tt, join(dir_save, "v.xdmf"))
     export_xdmf(msh, ll, tt, join(dir_save, "l.xdmf"))
+
+    # Check modulus-1 constraint
+    error_mod_tt = error_unit_modulus(mm)  
+    print("Error unit modulus:", error_mod_tt)
+    print("Max error unit modulus:", np.amax(error_mod_tt))
+    
+    plt.plot(tt, error_mod_tt, label="Error unit modulus")
+    plt.xlabel("Time")
+    plt.title("Error on modulus = 1 constraint")
+    plt.savefig(join(dir_save, "error_unit_modulus.png"))
+    plt.show()
