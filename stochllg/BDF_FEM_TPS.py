@@ -19,11 +19,14 @@ Functions:
 
 """
 
-from petsc4py import PETSc
+
 import time
 import numpy as np
 from scipy.special import comb
 from math import sqrt
+
+from petsc4py import PETSc
+from mpi4py import MPI
 
 # Import dolfinx and ufl
 import ufl
@@ -253,24 +256,9 @@ def inf_sup_tps_sys(A, ip_V, ip_V3_inverse, verb_iter, mhat, V3, V):
     """
 
     beg_time = time.time()
-
-    # BUG why s this not working?
     B = A.getNestSubMatrix(1, 0)
     B = B.getValues(range(0, B.getSize()[0]), range(0, B.getSize()[1]))
-    # inf_sup_const = compute_inf_sup(B, ip_V3_isr, ip_V_isr, "sparse")
-
-    
-
-    # DEBUG: reassemble B as in test
-    # v = ufl.TrialFunction(V3)
-    # mu = ufl.TestFunction(V)
-    # b = ufl.inner(ufl.dot(v, mhat), mu) * dx
-    # B = fem.petsc.assemble_matrix(fem.form(b))
-    # B.assemble()
-    # B = B.getValues(range(0, B.getSize()[0]), range(0, B.getSize()[1]))
-
     inf_sup_const = estimate_inf_sup_const_EIGS(B, ip_V3_inverse, ip_V)
-
     end_time = time.time()
     if verb_iter:
         print(f"Inf-sup: {inf_sup_const:.4e}", f"(time: {end_time - beg_time:.4f}s)")
@@ -291,7 +279,6 @@ def solve_linear_system(A, b, V3, V, verbose=False):
     Returns:
         tuple: Solutions for magnetization (v) and Lagrange multipliers (lam).
     """
-    from mpi4py import MPI
 
     ksp = PETSc.KSP().create(MPI.COMM_SELF)
     ksp.setOperators(A)
@@ -454,7 +441,6 @@ def BDF_FEM_TPS(
 
         mhat, mr = compute_BDF(V3, gamma, delta, mm[j - bdf_order : j])
 
-        # METHOD 1: PETSC ######################################################
         a, b = ass_lin_forms(
             msh,
             quadrature_degree,
@@ -470,31 +456,10 @@ def BDF_FEM_TPS(
             H_input=None,
             verbose=False,
         )
-        A, b = assemble_lin_system(a, b)
-        v, lam = solve_linear_system(A, b, V3, V, verbose=False)
 
-        # METHOD 2 #############################################################
-        # Define mixed space
-        # Pr = element("Lagrange", msh.basix_cell(), data["fem_order"])
-        # Pr3 = element("Lagrange", msh.basix_cell(), data["fem_order"], shape=(3,))
-        # P_mix = mixed_element([Pr3, Pr])
-        # V_mix = fem.functionspace(msh, P_mix)
-        # a, b = assemble_linear_forms(
-        #     quadrature_degree,
-        #     H_input,
-        #     alpha,
-        #     gh,
-        #     W[j],
-        #     msh,
-        #     delta,
-        #     V_mix,
-        #     tau,
-        #     mhat,
-        #     mr,
-        #     verb_iter,
-        # )
-        # v, lam = solve_linear_pb(a, b, verb_iter)
-        ########################################################################
+        A, b = assemble_lin_system(a, b)
+
+        v, lam = solve_linear_system(A, b, V3, V, verbose=False)
 
         if return_inf_sup:
             # A = assemble_matrix_nest(a)
