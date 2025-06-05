@@ -8,7 +8,7 @@ from stochllg.parametric_W import param_LC_W
 
 # Physics data
 alpha = 1.4
-T = 1
+T = 0.2
 
 
 def W_fun(yy, tt):  # Wiener process

@@ -99,7 +99,7 @@ def compute_BDF(V3, gamma, delta, mvac_bdf):
     return mhat_n, mr
 
 
-def _ass_lin_forms(
+def ass_lin_forms(
     msh,
     quad_deg,
     alpha,
@@ -167,7 +167,7 @@ def _ass_lin_forms(
     return lhs_eq, rhs_eq
 
 
-def _assemble_lin_system(lhs_eq, rhs_eq):
+def assemble_lin_system(lhs_eq, rhs_eq):
     """Assembles the system matrix and vector from given equations.
 
     Args:
@@ -455,7 +455,7 @@ def BDF_FEM_TPS(
         mhat, mr = compute_BDF(V3, gamma, delta, mm[j - bdf_order : j])
 
         # METHOD 1: PETSC ######################################################
-        a, b = _ass_lin_forms(
+        a, b = ass_lin_forms(
             msh,
             quadrature_degree,
             alpha,
@@ -470,7 +470,7 @@ def BDF_FEM_TPS(
             H_input=None,
             verbose=False,
         )
-        A, b = _assemble_lin_system(a, b)
+        A, b = assemble_lin_system(a, b)
         v, lam = solve_linear_system(A, b, V3, V, verbose=False)
 
         # METHOD 2 #############################################################

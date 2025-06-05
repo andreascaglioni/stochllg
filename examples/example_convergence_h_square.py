@@ -49,7 +49,7 @@ if __name__ == "__main__":
     dim_y = 1
     tt = data_nomsh["tt"]
     tau_max = np.amax(tt[1:] - tt[:-1])
-    idxs_meshes = np.arange(0, 4)  # last REFERENCE
+    idxs_meshes = np.arange(0, 5)  # last REFERENCE
     print("Indices meshes:", idxs_meshes, "(last used as reference)")
     print("")
 
@@ -97,8 +97,8 @@ if __name__ == "__main__":
         data = set_FE_data(msh, data_nomsh)
         hh[i] = sqrt(np.amin(mea(msh)))
 
-        ip_V = data["ip_V"]  # inverse_sqrt(data["ip_V"])
-        ip_V3_inverse =  np.linalg.inv(data["ip_V3"])  # inverse_sqrt(data["ip_V3"])
+        ip_V = data["ip_V"]
+        ip_V3_inverse =  np.linalg.inv(data["ip_V3"])
 
         print("Compute discrete solution h:", float_f(hh[i]), "dt:", float_f(ddt[i]))
         mm, _, _, is_tt = BDF_FEM_TPS(data, return_inf_sup=True, 
@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
         # Plot inf-sup 
         plt.figure("isc_t")
-        plt.semilogy(tt[:-1], is_tt, ".-", label="h = " + float_f(hh[i]))
+        plt.semilogy(tt[:-1], is_tt, "-", label="h = " + float_f(hh[i]))
         
 
     # POST-PROCESS
@@ -144,6 +144,8 @@ if __name__ == "__main__":
     rate = compute_rate(hh, err_tx)
     print("Convergence rate:", rate)
     print("Min inf-sup:", min_isc)
+    rate_is = compute_rate(hh, min_isc)
+    print("Convergence rate:", rate_is)
 
     # Export data convergence
     A = np.vstack((hh, ddt, err_tx, min_isc)).T
@@ -151,15 +153,24 @@ if __name__ == "__main__":
 
     # Plot
     plt.figure("error")
-    plt.title(r"L^{\infty}(0, T, H^1(D)) Error")
+    plt.title(r"$L^{\infty}(0, T, H^1(D))$ error vs $h$")
     plt.loglog(hh, err_tx, ".-", label="error")
-    C = err_tx[0] / hh[0]
-    plt.loglog(hh, C * hh, "k-", label="C*h)")
     C = err_tx[0] / (hh[0] ** rate[-1])
     plt.loglog(hh, C * hh ** rate[-1], "k--", label="C*h^" + float_f(rate[-1]))
     plt.legend()
     plt.xlabel("h")
     plt.savefig(join(dir_save, "conv_error.png"))
+
+    plt.figure("min_inf_sup")
+    plt.title(r"Min inf-sup constant vs $h$")
+    plt.loglog(hh, min_isc, ".-", label="min inf-sup")
+    C = err_tx[0] / (hh[0] ** rate_is[-1])
+    plt.loglog(hh, C * hh ** rate_is[-1], "k--", label="C*h^" + float_f(rate_is[-1]))
+    C = err_tx[0] / hh[0]
+    plt.xlabel("h")
+    plt.ylabel("min inf-sup")
+    plt.legend()
+    plt.savefig(join(dir_save, "min_inf_sup.png"))
 
     plt.figure("error_t")
     plt.xlabel("t")
