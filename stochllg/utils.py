@@ -46,16 +46,17 @@ from scipy.interpolate import interp1d
 
 # Import dolfinx
 from dolfinx import default_real_type
+import ufl
 from dolfinx.io import XDMFFile
 from dolfinx.fem import (
     Function,
     form,
     create_interpolation_data,
     element,
-    functionspace
+    functionspace,
+    Expression
 )
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector
-import ufl
 from ufl import dx, grad, inner, TrialFunction, TestFunction
 from basix.ufl import element
 
@@ -186,6 +187,22 @@ def compute_data_nonmatch_interpol(V_exa, V):
     interpolation_data = create_interpolation_data(V_exa, V, cells)
     return cells, interpolation_data
 
+
+def error_unit_modulus(mm):
+    n_tt = len(mm)
+    errmagtime = np.zeros(n_tt)
+    V = mm[0].function_space.sub(0).collapse()[0]  # collapse() returns tuple. Second eleemnt is a map from old to new
+    error_function = Function(V)
+    for i in range(n_tt):
+        m = mm[i]
+        m_mag = ufl.sqrt(m[0] ** 2 + m[1] ** 2 + m[2] ** 2)  # in l2 or Euclidean norm
+        error_function.interpolate(Expression(1-m_mag, V.element.interpolation_points()))
+        
+
+
+        
+        errmagtime[i] = sqrt(asseinner(error_function, error_function) * ufl.dx)
+    return errmagtime
 
 def error_space_time(
     u_exa,
