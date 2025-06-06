@@ -30,12 +30,16 @@ from dolfinx.io import XDMFFile
 
 
 if __name__ == "__main__":
-    # SETTINGS
+    # ------------------------------------------------------------------------ #
+    #                                 SETTINGS                                 #
+    # ------------------------------------------------------------------------ #
     np.set_printoptions(formatter={"float_kind": float_f})
     comm = MPI.COMM_SELF
     np.random.seed(0)
 
-    # PARAMETERS & DATA
+    # ------------------------------------------------------------------------ #
+    #                                PARAMETERS                                #
+    # ------------------------------------------------------------------------ #
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     dir_save = join("simulations", "TPS_conv_h_square_" + date + "/")
     os.makedirs(dir_save)
@@ -53,13 +57,16 @@ if __name__ == "__main__":
     print("Indices meshes:", idxs_meshes, "(last used as reference)")
     print("")
 
-    # COMPUTE
+    # ------------------------------------------------------------------------ #
+    #                                  COMPUTE                                 #
+    # ------------------------------------------------------------------------ #
     MC_sample = np.random.randn(dim_y)
     np.savetxt(join(dir_save, "MC_sample.csv"), MC_sample, delimiter=",")
     W = data_nomsh["W_fun"](MC_sample, tt)
     # Add rank 1 array to data (because BDF_FEM_TPS only handles 1 sample at a time)
     data_nomsh["W"] = np.squeeze(W)
 
+    # ---------------------- Compute reference solution ---------------------- #
     print("Sample reference solution")
     N_elems_ref = 4 * 2 ** idxs_meshes[-1]
     ref_mesh_filename = join(
@@ -87,7 +94,8 @@ if __name__ == "__main__":
     ddt = np.ones_like(err_tx) * tau_max
 
     for i, msh_idx in enumerate(idxs_meshes):
-        # Load mesh and compute mesh data
+
+        # ----------------------------- Load data ---------------------------- #
         n_elems = 4 * 2**msh_idx
         mesh_filename = join(
             "data", "mesh_square_structured", f"mesh_square_{n_elems}.xdmf"
@@ -96,15 +104,15 @@ if __name__ == "__main__":
             msh = xdmf.read_mesh()
         data = set_FE_data(msh, data_nomsh)
         hh[i] = sqrt(np.amin(mea(msh)))
-
         ip_V = data["ip_V"]
         ip_V3_inverse =  np.linalg.inv(data["ip_V3"])
 
+        # ------------------------------ compute ----------------------------- #
         print("Compute discrete solution h:", float_f(hh[i]), "dt:", float_f(ddt[i]))
         mm, _, _, is_tt = BDF_FEM_TPS(data, return_inf_sup=True, 
                                       ip_V=ip_V, ip_V3_inverse=ip_V3_inverse)
 
-        # Compute error
+        # --------------------------- Compute error -------------------------- #
         data_nonmatch = compute_data_nonmatch_interpol(data_ref["V3"], data["V3"])
         err_tx[i], err_tt = error_space_time(
             mm_ref,
@@ -116,27 +124,28 @@ if __name__ == "__main__":
             data_nonmatch=data_nonmatch,
             t_error_type="Linf",
         )
+
+        # --------------------------- Post-process --------------------------- #
         min_isc[i] = np.amin(is_tt)
         
         print(r"L^{\infty}(0, T, H^1(D)) error:", float_f(err_tx[i]))
         print("Min inf-sup:", min_isc[i])
         print("")
 
-        # Export
         np.savetxt(join(dir_save, f"error_tt_{msh_idx}.csv"), err_tt, delimiter=",")
         np.savetxt(join(dir_save, f"isc_t_{msh_idx}.csv"), is_tt, delimiter=",")
         export_xdmf(msh, mm, tt, join(dir_save, "m_" + str(msh_idx) + ".xdmf"))
 
-        # Plot sequence of time errors
         plt.figure("error_t")
         plt.semilogy(tt, err_tt, "-", label="h = " + float_f(hh[i]))
 
-        # Plot inf-sup 
         plt.figure("isc_t")
         plt.semilogy(tt[:-1], is_tt, "-", label="h = " + float_f(hh[i]))
         
 
-    # POST-PROCESS
+    # ------------------------------------------------------------------------ #
+    #                               POST-PROCESS                               #
+    # ------------------------------------------------------------------------ #
     # print
     print("h: ", hh)  # , "reference: ", float_f(h_ref))
     print("dt:", ddt)
