@@ -30,18 +30,16 @@ from mpi4py import MPI
 
 # Import dolfinx and ufl
 import ufl
+from dolfinx import la
 from dolfinx.fem import Constant, Function, form, Expression
 from ufl import dx, grad, inner, cross, dot
 from dolfinx.fem.petsc import assemble_matrix_nest, assemble_vector_nest, LinearProblem
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector
-from dolfinx import fem
-from dolfinx import la
-from basix.ufl import mixed_element, element
-from dolfinx import default_real_type
+
 
 
 # Import from this project
-from stochllg.inf_sup import compute_inf_sup, estimate_inf_sup_const_EIGS
+from stochllg.inf_sup import estimate_inf_sup_const_EIGS
 
 
 def coeffs_bdf(k):
