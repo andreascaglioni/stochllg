@@ -19,7 +19,6 @@ Functions:
 
 """
 
-
 import time
 import numpy as np
 from scipy.special import comb
@@ -35,7 +34,6 @@ from dolfinx.fem import Constant, Function, form, Expression
 from ufl import dx, grad, inner, cross, dot
 from dolfinx.fem.petsc import assemble_matrix_nest, assemble_vector_nest, LinearProblem
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector
-
 
 
 # Import from this project
@@ -101,19 +99,7 @@ def compute_BDF(V3, gamma, delta, mvac_bdf):
 
 
 def ass_lin_forms(
-    msh,
-    quad_deg,
-    alpha,
-    mhat,
-    mr,
-    tau,
-    delta,
-    gh,
-    W_j,
-    V3,
-    V,
-    H_input=None,
-    verbose=False,
+    msh, quad_deg, alpha, mhat, mr, tau, delta, gh, W_j, V3, V, H_input=None
 ):
     (v, lam) = ufl.TrialFunction(V3), ufl.TrialFunction(V)
     (phi, mu) = ufl.TestFunction(V3), ufl.TestFunction(V)
@@ -136,7 +122,6 @@ def ass_lin_forms(
     else:
         dxr = dx(metadata={"quadrature_degree": quad_deg})
 
-    beg_time = time.time()
     tau_norm = Constant(msh, PETSc.ScalarType(tau / delta[0]))
 
     jit_opts = {
@@ -183,60 +168,6 @@ def assemble_lin_system(lhs_eq, rhs_eq):
     A.assemble()
     b = assemble_vector_nest(rhs_eq)
     return A, b
-
-
-# DEPRECATED
-# def assemble_linear_forms(
-#     q_deg,
-#     H_in,
-#     alpha,
-#     gh,
-#     W_tcurr,
-#     msh,
-#     delta,
-#     V_mix,
-#     tau,
-#     mhat,
-#     mr,
-#     verb_iter,
-# ):
-#     (v, lam) = ufl.TrialFunctions(V_mix)
-#     (phi, mu) = ufl.TestFunctions(V_mix)
-#     Cs = Constant(msh, PETSc.ScalarType(np.sin(W_tcurr)))
-#     Cc = Constant(msh, PETSc.ScalarType(1 - np.cos(W_tcurr)))
-#     # build external magnetic field
-#     # if H_in is not None:
-#     #     H = Constant(H_in)
-#     # else:
-#     #     z = PETSc.ScalarType(0.0)
-#     #     zv = (z, z, z)
-#     #     H = Constant(msh, zv)
-#     # HH = -Cs * cross(H, gh) + Cc * cross(cross(H, gh), gh)
-#     # jit_opts = {
-#     #     "cffi_extra_compile_args": ["-O3", "-march=native"],
-#     #     "cffi_libraries": ["m"],
-#     # }
-#     tau_norm = Constant(msh, PETSc.ScalarType(tau / delta[0]))
-#     dxr = dx(metadata={"quadrature_degree": q_deg})
-
-#     beg_time = time.time()
-#     grad_exp_v = grad(v + Cs * cross(v, gh) + Cc * cross(cross(v, gh), gh))
-#     grad_exp_phi = grad(phi + Cs * cross(phi, gh) + Cc * cross(cross(phi, gh), gh))
-#     a = (
-#         alpha * inner(v, phi)
-#         + inner(cross(mhat, v), phi)
-#         + tau_norm * inner(grad_exp_v, grad_exp_phi)
-#     ) * dxr
-#     a += inner(dot(phi, mhat), lam) * dxr
-#     a += inner(dot(v, mhat), mu) * dxr
-
-#     grad_exp_mr = grad(mr + Cs * cross(mr, gh) + Cc * cross(cross(mr, gh), gh))
-#     b = -inner(grad_exp_mr, grad_exp_phi) * dxr
-#     b += inner(Constant(msh, PETSc.ScalarType(0)), mu) * dxr
-#     end_time = time.time()
-#     if verb_iter:
-#         print(f"Assembly time: {end_time - beg_time:.4f}s", flush=True)
-#     return a, b
 
 
 def inf_sup_tps_sys(A, ip_V, ip_V3_inverse, verb_iter, mhat, V3, V):
@@ -290,40 +221,53 @@ def solve_linear_system(A, b, V3, V, verbose=False):
     beg_time = time.time()
     ksp.solve(b, x)
     end_time = time.time()
-    if verbose:
-        print(f"Solve time: {end_time - beg_time:.4f}s")
-    return v, lam
-
-
-def solve_linear_pb(a, b, verbose):
-    beg_time = time.time()
-    jit_opts = {
-        "cffi_extra_compile_args": ["-O3", "-march=native"],
-        "cffi_libraries": ["m"],
-    }
-    problem = LinearProblem(
-        a,
-        b,
-        petsc_options={"ksp_type": "gmres", "pc_type": "hypre"},
-        jit_options=jit_opts,
-    )
-    x = problem.solve()
 
     # Check residual
-    A = assemble_matrix(form(a))
-    A.assemble()
     A = A.getValues(range(0, A.getSize()[0]), range(0, A.getSize()[1]))
     b_vec = assemble_vector(form(b))
     r = b_vec.array - A * x.x.array
-    print("Residual linear solver:", np.linalg.norm(r) / np.linalg.norm(b_vec))
-
-    v, lam = x.sub(0).collapse(), x.sub(1).collapse()
-
-    end_time = time.time()
+    rel_res = np.linalg.norm(r) / np.linalg.norm(b_vec)
     if verbose:
-        print(f"Solve time: {end_time - beg_time:.4f}s")
-
+        print(
+            "Relative residual linear solver:",
+            rel_res,
+            f"(time: {end_time - beg_time:.4f} s",
+        )
+    if rel_res > 1e-4:
+        print(f"Warning: Large linear solver relative residual: {rel_res:.4e}")
     return v, lam
+
+
+# def solve_linear_pb(a, b, verbose):
+#     beg_time = time.time()
+#     jit_opts = {
+#         "cffi_extra_compile_args": ["-O3", "-march=native"],
+#         "cffi_libraries": ["m"],
+#     }
+#     problem = LinearProblem(
+#         a,
+#         b,
+#         petsc_options={"ksp_type": "gmres", "pc_type": "hypre"},
+#         jit_options=jit_opts,
+#     )
+#     x = problem.solve()
+#     v, lam = x.sub(0).collapse(), x.sub(1).collapse()
+#     # Check residual
+#     A = assemble_matrix(form(a))
+#     A.assemble()
+#     A = A.getValues(range(0, A.getSize()[0]), range(0, A.getSize()[1]))
+#     b_vec = assemble_vector(form(b))
+#     r = b_vec.array - A * x.x.array
+#     rel_res = np.linalg.norm(r) / np.linalg.norm(b_vec)
+#     end_time = time.time()
+#     if verbose:
+#         print(
+#             "Relative residual linear solver:",
+#             rel_res,
+#             f"(time: {end_time - beg_time:.4f} s",
+#         )
+
+#     return v, lam
 
 
 def update_m(V3, mr, tau, delta, v):
@@ -439,6 +383,8 @@ def BDF_FEM_TPS(
 
         mhat, mr = compute_BDF(V3, gamma, delta, mm[j - bdf_order : j])
 
+        beg_time = time.time()
+
         a, b = ass_lin_forms(
             msh,
             quadrature_degree,
@@ -452,16 +398,17 @@ def BDF_FEM_TPS(
             V3,
             V,
             H_input=None,
-            verbose=False,
         )
 
         A, b = assemble_lin_system(a, b)
 
+        end_time = time.time()
+        if verb_iter:
+            print(f"Assembly time: {end_time - beg_time:.4f}s", flush=True)
+
         v, lam = solve_linear_system(A, b, V3, V, verbose=False)
 
         if return_inf_sup:
-            # A = assemble_matrix_nest(a)
-            # A.assemble()
             inf_sup_t[j - 1] = inf_sup_tps_sys(
                 A, ip_V, ip_V3_inverse, verb_iter, mhat, V3, V
             )
