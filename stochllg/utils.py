@@ -188,21 +188,18 @@ def compute_data_nonmatch_interpol(V_exa, V):
     return cells, interpolation_data
 
 
-def error_unit_modulus(mm):
-    n_tt = len(mm)
-    errmagtime = np.zeros(n_tt)
-    V = mm[0].function_space.sub(0).collapse()[0]  # collapse() returns tuple. Second eleemnt is a map from old to new
-    error_function = Function(V)
-    for i in range(n_tt):
-        m = mm[i]
-        m_mag = ufl.sqrt(m[0] ** 2 + m[1] ** 2 + m[2] ** 2)  # in l2 or Euclidean norm
-        error_function.interpolate(Expression(1-m_mag, V.element.interpolation_points()))
+# def error_unit_modulus(mm):
+#     n_tt = len(mm)
+#     errmagtime = np.zeros(n_tt)
+#     V = mm[0].function_space.sub(0).collapse()[0]  # collapse() returns tuple. Second eleemnt is a map from old to new
+#     error_function = Function(V)
+#     for i in range(n_tt):
+#         m = mm[i]
+#         m_mag = ufl.sqrt(m[0] ** 2 + m[1] ** 2 + m[2] ** 2)  # in l2 or Euclidean norm
+#         error_function.interpolate(Expression(1-m_mag, V.element.interpolation_points()))
         
-
-
-        
-        errmagtime[i] = sqrt(asseinner(error_function, error_function) * ufl.dx)
-    return errmagtime
+#         errmagtime[i] = sqrt(asseinner(error_function, error_function) * ufl.dx)
+    # return errmagtime
 
 def error_space_time(
     u_exa,
@@ -266,14 +263,7 @@ def error_space_time(
             f_Vexa.x.array[:] = U_dofs[i]
         else:  # the FE spaces are matching but not the same
             f_V.x.array[:] = U_dofs[i]
-
-
-
-            ###################### CHECK 
-            f_Vexa.interpolate(f_V) # SEGV!!!
-            ###################### CHECK
-
-            
+            f_Vexa.interpolate(f_V)
         # Compute error in FE space
         f_Vexa.x.array[:] -= u_exa[i].x.array
         err_tt[i] = ip_norm(f_Vexa.x.array, A=ip_matrix)

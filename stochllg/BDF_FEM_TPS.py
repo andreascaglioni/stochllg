@@ -223,18 +223,20 @@ def solve_linear_system(A, b, V3, V, verbose=False):
     end_time = time.time()
 
     # Check residual
-    A = A.getValues(range(0, A.getSize()[0]), range(0, A.getSize()[1]))
-    b_vec = assemble_vector(form(b))
-    r = b_vec.array - A * x.x.array
-    rel_res = np.linalg.norm(r) / np.linalg.norm(b_vec)
-    if verbose:
-        print(
-            "Relative residual linear solver:",
-            rel_res,
-            f"(time: {end_time - beg_time:.4f} s",
-        )
-    if rel_res > 1e-4:
-        print(f"Warning: Large linear solver relative residual: {rel_res:.4e}")
+    # TODO make A.getValues work for nost mat or compute res with petsc4py
+    # A = A.getValues(range(0, A.getSize()[0]), range(0, A.getSize()[1]))
+    # b_vec = assemble_vector(form(b))
+    # r = b_vec.array - A * x.x.array
+    # rel_res = np.linalg.norm(r) / np.linalg.norm(b_vec)
+    # if verbose:
+    #     print(
+    #         "Relative residual linear solver:",
+    #         rel_res,
+    #         f"(time: {end_time - beg_time:.4f} s",
+    #     )
+    # if rel_res > 1e-4:
+    #     print(f"Warning: Large linear solver relative residual: {rel_res:.4e}")
+
     return v, lam
 
 
