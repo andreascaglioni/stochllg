@@ -98,9 +98,8 @@ def compute_BDF(V3, gamma, delta, mvac_bdf):
     return mhat_n, mr
 
 
-def ass_lin_forms(
-    msh, quad_deg, alpha, mhat, mr, tau, delta, gh, W_j, V3, V, H_input=None
-):
+def ass_lin_forms(msh, quad_deg, alpha, mhat, mr, tau, delta, gh, W_j, V3, V, Hh_j):
+
     (v, lam) = ufl.TrialFunction(V3), ufl.TrialFunction(V)
     (phi, mu) = ufl.TestFunction(V3), ufl.TestFunction(V)
 
@@ -109,12 +108,10 @@ def ass_lin_forms(
     Cc = Constant(msh, PETSc.ScalarType(1 - np.cos(W_j)))
 
     # build external magnetic field
-    if H_input is not None:
-        H = Constant(H_input)
-    else:
+    if Hh_j is None:
         z = PETSc.ScalarType(0.0)
-        H = Constant(msh, (z, z, z))
-    HH = -Cs * cross(H, gh) + Cc * cross(cross(H, gh), gh)
+        Hh_j = Constant(msh, (z, z, z))
+    exp_H = Hh_j + Cs * cross(Hh_j, gh) + Cc * cross(cross(Hh_j, gh), gh)
 
     # define LLG form
     if quad_deg == 0:
@@ -129,7 +126,6 @@ def ass_lin_forms(
         "cffi_libraries": ["m"],
     }
 
-    # TODO: split definition in several variables to make readable
     grad_exp_phi = grad(phi + Cs * cross(phi, gh) + Cc * cross(cross(phi, gh), gh))
     grad_exp_v = grad(v + Cs * cross(v, gh) + Cc * cross(cross(v, gh), gh))
 
@@ -147,9 +143,10 @@ def ass_lin_forms(
     )
 
     grad_exp_mr = grad(mr + Cs * cross(mr, gh) + Cc * cross(cross(mr, gh), gh))
-    rhs0 = -inner(grad_exp_mr, grad_exp_phi) * dxr
+    rhs0 = (-inner(grad_exp_mr, grad_exp_phi) + inner(exp_H, phi)) * dxr
     rhs1 = inner(Constant(msh, PETSc.ScalarType(0)), mu) * dxr
     rhs_eq = form([rhs0, rhs1], jit_options=jit_opts)
+
     return lhs_eq, rhs_eq
 
 
@@ -295,7 +292,6 @@ def BDF_FEM_TPS(
     data,
     quadrature_degree=0,
     verbose=False,
-    H_input=None,
     return_inf_sup=False,
     ip_V=[],
     ip_V3_inverse=[],
@@ -308,39 +304,39 @@ def BDF_FEM_TPS(
     Args:
         data (dict): A dictionary containing the problem setup and parameters:
 
-            - **m0h** (*Function*): Initial magnetization function.
-            - **alpha** (*float*): Damping parameter.
-            - **gh** (*Function*): External field function.
-            - **W** (*np.ndarray*): 1D array of values of Brownian motion on time steps.
-            - **tt** (*np.ndarray*): Array of time steps.
-            - **bdf_order** (*int*): Order of the BDF scheme (currently only 1 is supported).
-            - **msh** (*Mesh*): The computational mesh.
-            - **V3** (*FunctionSpace*): Function space for vector fields.
-            - **V** (*FunctionSpace*): Function space for scalar fields.
+            - m0h (Function): Initial magnetization function.
+            - alpha (float): Damping parameter.
+            - gh (Function): External field function.
+            - W (np.ndarray): 1D array of values of Brownian motion on time steps.
+            - tt (np.ndarray): Array of time steps.
+            - bdf_order (int): Order of the BDF scheme (currently only 1 is supported).
+            - msh (Mesh): The computational mesh.
+            - V3 (FunctionSpace): Function space for vector fields.
+            - V (FunctionSpace): Function space for scalar fields.
+            - H (Function, optional): External magnetic field. Set to None if 0.
 
-        quadrature_degree (*int*, optional): Degree of quadrature used for numerical integration.
+        quadrature_degree (int, optional): Degree of quadrature used for numerical integration.
             Defaults to 0, which uses the default quadrature degree.
-        verbose (*bool* or *int*, optional): Controls verbosity of the output:
+        verbose (bool or int, optional): Controls verbosity of the output:
             - If `False`, no output is printed.
             - If `True`, detailed output is printed for every iteration.
             - If an integer, output is printed every `verbose` iterations.
             Defaults to `False`.
-        H_input (*Function*, optional): Optional input for an external magnetic field.
-            If `None`, no external field is applied. Defaults to `None`.
-        return_inf_sup (*bool*, optional): If `True`, computes and returns the inf-sup constants
+        return_inf_sup (bool, optional): If `True`, computes and returns the inf-sup constants
             for the linear systems solved at each time step. Defaults to `False`.
-        ip_V (np.ndarray[float], optional): Inner product matrix of *V*. Used
+        ip_V (np.ndarray[float], optional): Inner product matrix of V. Used
             for inf-sup constant computation. Defaults to an empty list.
         ip_V3_inverse (np.ndarray[float], optional): Inverse of inner product
-            matrix of *V3*. Used for inf-sup constant computation. Defaults to
+            matrix of V3. Used for inf-sup constant computation. Defaults to
             an empty list.
+
 
     Returns:
         tuple: A tuple containing:
-            - *list[Function]*: Magnetization functions at each time step.
-            - *list[Function]*: Velocity functions at each time step (excluding the initial step).
-            - *list[Function]*: Lagrange multiplier functions at each time step (excluding the initial step).
-            - *np.ndarray[float]*: Array of inf-sup constants for each time step (if `return_inf_sup` is `True`).
+            - list[Function]: Magnetization functions at each time step.
+            - list[Function]: Velocity functions at each time step (excluding the initial step).
+            - list[Function]: Lagrange multiplier functions at each time step (excluding the initial step).
+            - np.ndarray[float]: Array of inf-sup constants for each time step (if `return_inf_sup` is `True`).
     """
 
     # Handle verbosity: turn into int
@@ -355,7 +351,8 @@ def BDF_FEM_TPS(
     m0h = data["m0h"]
     alpha = data["alpha"]
     gh = data["gh"]
-    W = data["W"]
+    WW = data["W"]
+    Hh = data["Hh"] if "Hh" in data else None
     tt = data["tt"]
     bdf_order = data["bdf_order"]
     msh = data["msh"]
@@ -382,11 +379,13 @@ def BDF_FEM_TPS(
             print("Iteration", j, flush=True)
 
         tau = tt[j] - tt[j - 1]
-
+        
         mhat, mr = compute_BDF(V3, gamma, delta, mm[j - bdf_order : j])
 
-        beg_time = time.time()
+        # Assign current external H field
+        Hh_curr = Hh[j] if type(Hh) is list else Hh
 
+        beg_time = time.time()
         a, b = ass_lin_forms(
             msh,
             quadrature_degree,
@@ -396,10 +395,10 @@ def BDF_FEM_TPS(
             tau,
             delta,
             gh,
-            W[j],
+            WW[j],
             V3,
             V,
-            H_input=None,
+            Hh_curr,
         )
 
         A, b = assemble_lin_system(a, b)

@@ -59,6 +59,8 @@ from dolfinx.fem import (
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector
 from ufl import dx, grad, inner, TrialFunction, TestFunction
 from basix.ufl import element
+import inspect
+import warnings
 
 
 def compute_rate(xx, yy):
@@ -354,6 +356,28 @@ def set_FE_data(msh, data):
     gh = Function(V3)
     gh.interpolate(data["g"])
 
+    # Handle data["H"] depending on its type and number of arguments
+    H = data["H"]
+    if callable(H):
+        sig = inspect.signature(H)
+        if len(sig.parameters) == 1:  
+            # H(x): interpolate directly
+            Hh = Function(V3)
+            Hh.interpolate(H)
+        elif len(sig.parameters) == 2 and "tt" in data:
+            # H(t, x): interpolate for each time step
+            tt = data["tt"]
+            Hh = [Function(V3) for _ in tt]
+            for i, t in enumerate(tt):
+                H_func = lambda x, t=t: H(t, x)  # noqa: E731
+                Hh[i].interpolate(H_func)
+        else:
+            Hh = None
+            warnings.warn("data['H'] should take 1 or 2 arguments (x or t, x).")
+    else:
+        raise ValueError("data['H'] must be callable")
+
+
     # Deep-copy data into new dictionary and add FE data
     data_out = deepcopy(data)
     data_out["m0h"] = m0h
@@ -363,4 +387,5 @@ def set_FE_data(msh, data):
     data_out["V3"] = V3
     data_out["ip_V3"] = get_H1_matrix(V3)
     data_out["ip_V"] = get_L2_matrix(V)
+    data_out["Hh"] = Hh
     return data_out
