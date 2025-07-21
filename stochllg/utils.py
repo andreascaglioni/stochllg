@@ -3,39 +3,7 @@
 This module provides a collection of utility functions for working with finite element
 spaces, exporting data, computing errors, and handling mesh-related operations.
 
-Functions:
-    ``compute_rate(xx, yy)``:
-        Compute the rate of change between two arrays.
 
-    ``export_xdmf(msh, f, tt=np.array([]), filename="plot.xdmf")``:
-        Export finite element functions to an XDMF file.
-
-    ``get_H1_matrix(V3)``:
-        Compute the H1 inner product matrix for a given finite element space.
-
-    ``get_L2_matrix(V)``:
-        Compute the L2 inner product matrix for a given finite element space.
-
-    ``ip_norm(x, A=None)``:
-        Compute the norm of a vector with respect to an inner product matrix.
-
-    ``compute_data_nonmatch_interpol(V_exa, V)``:
-        Compute interpolation data for non-matching finite element spaces.
-
-    ``error_space_time(u_exa, tt_exa, U_in, tt, ip_matrix, matching_x_spaces=True, data_nonmatch=None, t_error_type="L2")``:
-        Compute the space-time error between two functions.
-
-    ``inverse_sqrt(A)``:
-        Compute the inverse square root of a matrix.
-
-    ``float_f(x)``:
-        Format a float variable in scientific notation.
-
-    ``mesh_elems_area(msh)``:
-        Compute the area of elements in a 2D mesh.
-
-    ``set_FE_data(msh, data)``:
-        Set finite element data for a given mesh and save it into a dictionary.
 """
 
 from math import sqrt
@@ -45,20 +13,29 @@ from scipy.linalg import eigh
 from scipy.interpolate import interp1d
 
 # Import dolfinx
-from dolfinx import default_real_type
+from dolfinx import default_real_type, fem
 import ufl
 from dolfinx.io import XDMFFile
 from dolfinx.fem import (
     Function,
     form,
     create_interpolation_data,
-    element,
-    functionspace,
-    Expression
+    functionspace
 )
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector
 from ufl import dx, grad, inner, TrialFunction, TestFunction
 from basix.ufl import element
+
+
+def modulus_1_error(m, dx=ufl.dx):
+    integrand = fem.form((1. - ufl.inner(m, m)) * dx)
+    return sqrt(abs(fem.assemble_scalar(integrand)))
+
+
+def dirichlet_energy(m, dx=ufl.dx):
+    grad_u = ufl.grad(m)
+    squared_gradient_form = fem.form(ufl.inner(grad_u, grad_u) * dx)
+    return sqrt(fem.assemble_scalar(squared_gradient_form))
 
 
 def compute_rate(xx, yy):
@@ -113,7 +90,7 @@ def export_xdmf(msh, f, tt=np.array([]), filename="plot.xdmf"):
     xdmf.close()
 
 
-def get_H1_matrix(V3):
+def get_H10_matrix(V3):
     """
     Compute the symmetrized H1 inner product matrix for a finite element space.
 
@@ -126,10 +103,10 @@ def get_H1_matrix(V3):
 
     v_trial = TrialFunction(V3)
     v_test = TestFunction(V3)
-    H1_product_form = form(
+    H10_product_form = form(
         (inner(v_trial, v_test) + inner(grad(v_trial), grad(v_test))) * dx
     )
-    H1_product = assemble_matrix(H1_product_form)
+    H1_product = assemble_matrix(H10_product_form)
     H1_product.assemble()
     sz = H1_product.size
     H1_product = H1_product.getValues(range(0, sz[0]), range(0, sz[1]))
@@ -361,6 +338,6 @@ def set_FE_data(msh, data):
     data_out["msh"] = msh
     data_out["V"] = V
     data_out["V3"] = V3
-    data_out["ip_V3"] = get_H1_matrix(V3)
+    data_out["ip_V3"] = get_H10_matrix(V3)
     data_out["ip_V"] = get_L2_matrix(V)
     return data_out
