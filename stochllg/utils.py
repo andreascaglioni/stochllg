@@ -30,7 +30,7 @@ import warnings
 
 
 def modulus_1_error(m, dx=ufl.dx):
-    integrand = fem.form((1. - ufl.inner(m, m)) * dx)
+    integrand = fem.form((abs(1. - ufl.inner(m, m))) * dx)
     return sqrt(abs(fem.assemble_scalar(integrand)))
 
 
