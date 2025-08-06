@@ -334,25 +334,29 @@ def set_FE_data(msh, data):
     gh.interpolate(data["g"])
 
     # Handle data["H"] depending on its type and number of arguments
-    H = data["H"]
-    if callable(H):
-        sig = inspect.signature(H)
-        if len(sig.parameters) == 1:  
-            # H(x): interpolate directly
-            Hh = Function(V3)
-            Hh.interpolate(H)
-        elif len(sig.parameters) == 2 and "tt" in data:
-            # H(t, x): interpolate for each time step
-            tt = data["tt"]
-            Hh = [Function(V3) for _ in tt]
-            for i, t in enumerate(tt):
-                H_func = lambda x, t=t: H(t, x)  # noqa: E731
-                Hh[i].interpolate(H_func)
+    
+    if "H" in data:
+        H = data["H"]
+        if callable(H):
+            sig = inspect.signature(H)
+            if len(sig.parameters) == 1:  
+                # H(x): interpolate directly
+                Hh = Function(V3)
+                Hh.interpolate(H)
+            elif len(sig.parameters) == 2 and "tt" in data:
+                # H(t, x): interpolate for each time step
+                tt = data["tt"]
+                Hh = [Function(V3) for _ in tt]
+                for i, t in enumerate(tt):
+                    H_func = lambda x, t=t: H(t, x)  # noqa: E731
+                    Hh[i].interpolate(H_func)
+            else:
+                Hh = None
+                warnings.warn("data['H'] should take 1 or 2 arguments (x or t, x).")
         else:
-            Hh = None
-            warnings.warn("data['H'] should take 1 or 2 arguments (x or t, x).")
+            raise ValueError("data['H'] must be callable")
     else:
-        raise ValueError("data['H'] must be callable")
+        Hh = None
 
 
     # Deep-copy data into new dictionary and add FE data
