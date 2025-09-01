@@ -31,7 +31,7 @@ if __name__ == "__main__":
     os.makedirs(dir_save)
     print("Saving results in:", dir_save)
     shutil.copy(__file__, join(dir_save, "script.txt"))
-    from data.data_single_run_disk import data  # noqa: E402
+    from data.data_example_disk import data  # noqa: E402
 
     shutil.copy(join("data", "data_single_run.py"), join(dir_save, "data.txt"))
 
