@@ -407,13 +407,13 @@ def BDF_FEM_TPS(
         if verb_iter:
             print(f"Assembly time: {end_time - beg_time:.4f}s", flush=True)
 
-        v, lam = solve_linear_system(A, b, V3, V, verbose=False)
+        v, lam = solve_linear_system(A, b, V3, V, verbose=verb_iter)
 
         if return_inf_sup:
             inf_sup_t[j - 1] = inf_sup_tps_sys(
                 A, ip_V, ip_V3_inverse, verb_iter, mhat, V3, V
             )
-
+        
         m_new = update_m(V3, mr, tau, delta, v)
 
         mm[j].x.array[:] = m_new.x.array

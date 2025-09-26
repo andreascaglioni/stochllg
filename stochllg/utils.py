@@ -176,7 +176,6 @@ def compute_data_nonmatch_interpol(V_exa, V):
 #         m = mm[i]
 #         m_mag = ufl.sqrt(m[0] ** 2 + m[1] ** 2 + m[2] ** 2)  # in l2 or Euclidean norm
 #         error_function.interpolate(Expression(1-m_mag, V.element.interpolation_points()))
-        
 #         errmagtime[i] = sqrt(asseinner(error_function, error_function) * ufl.dx)
     # return errmagtime
 
@@ -334,7 +333,11 @@ def set_FE_data(msh, data):
     gh.interpolate(data["g"])
 
     # Handle data["H"] depending on its type and number of arguments
-    H = data["H"]
+    if "H" in data:
+        H = data["H"]
+    else:  # If H not given, assume 0
+        Hh = H = None 
+    
     if callable(H):
         sig = inspect.signature(H)
         if len(sig.parameters) == 1:  
@@ -351,8 +354,6 @@ def set_FE_data(msh, data):
         else:
             Hh = None
             warnings.warn("data['H'] should take 1 or 2 arguments (x or t, x).")
-    else:
-        raise ValueError("data['H'] must be callable")
 
 
     # Deep-copy data into new dictionary and add FE data
