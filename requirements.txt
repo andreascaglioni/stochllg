@@ -81,7 +81,7 @@ requests @ file:///home/conda/feedstock_root/build_artifacts/requests_1733217035
 roman-numerals-py==3.1.0
 scipy @ file:///croot/scipy_1737122901252/work/dist/scipy-1.15.1-cp313-cp313-linux_x86_64.whl#sha256=9a6cb470e3034bc3b01601dcb811fde25b29ba3a740ad9d37162f7db43ace477
 scooby @ file:///home/conda/feedstock_root/build_artifacts/scooby_1734299019922/work
-setuptools==75.8.0
+setuptools==83.0.0
 six @ file:///home/conda/feedstock_root/build_artifacts/six_1733380938961/work
 slepc4py @ file:///home/conda/feedstock_root/build_artifacts/slepc4py_1736027627487/work
 snowballstemmer @ file:///tmp/build/80754af9/snowballstemmer_1637937080595/work
